@@ -1,0 +1,136 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths-ignore:
+    # Any update here needs to be done for
+    # - `pull_request` see below
+      - '*.md'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/pull_request_template.md'
+      - '.github/stale.yml'
+      - 'LICENSE'
+      - 'Postman/**'
+  pull_request:
+    branches: [ main, develop ]
+    types: [opened, synchronize, reopened]
+    paths-ignore:
+    # Any update here needs to be done for
+    # - `push`see before
+      - '*.md'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/pull_request_template.md'
+      - '.github/stale.yml'
+      - 'LICENSE'
+      - 'Postman/**'
+    
+env:
+  buildConfiguration: 'Release'
+  buildRuntime: 'win-x64'
+  runEnvironment: 'Release'
+  ASPNETCORE_ENVIRONMENT: 'Release'
+  
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    ## NOTE: This workflow needs to also checkout the Mock Register for testing.
+    ##  This workflow will checkout the ConsumerDataRight/mock-register project
+
+    steps:
+    - name: Checkout Data Holder Energy
+      uses: actions/checkout@v2
+      with:
+        path: ./mock-data-holder-energy
+
+    - name: Checkout Register (Main Branch)
+      uses: actions/checkout@v2
+      if: ${{ github.ref == 'refs/heads/main' }}
+      with:
+        repository: ConsumerDataRight/mock-register
+        ref: main
+        path: ./mock-register
+
+    - name: Checkout Register (Develop Branch)
+      uses: actions/checkout@v2
+      if: ${{ github.ref != 'refs/heads/main' }}
+      with:
+        repository: ConsumerDataRight/mock-register
+        ref: develop
+        path: ./mock-register
+
+    - name: List contents
+      if: always()
+      run: |
+        ls
+        cd mock-data-holder-energy
+        ls
+        cd ..
+    # Build mock-register image
+    - name: Build the mock-register image
+      run: |
+        docker build ./mock-register/Source --file ./mock-register/Source/Dockerfile --tag mock-register:latest
+    # Build mock-data-holder-energy image
+    - name: Build the mock-data-holder-energy image
+      run: |
+        docker build ./mock-data-holder-energy/Source --file ./mock-data-holder-energy/Source/Dockerfile --tag mock-data-holder-energy:latest
+    # Build mock-data-holder-energy-unit-tests image
+    - name: Build the mock-data-holder-energy-unit-tests-energy image
+      run: |
+        docker build ./mock-data-holder-energy/Source --file ./mock-data-holder-energy/Source/Dockerfile.unit-tests --tag mock-data-holder-energy-unit-tests-energy:latest
+    # Build mock-data-holder-energy-integration-tests image
+    - name: Build the mock-data-holder-energy-integration-tests image
+      run: |
+        docker build ./mock-data-holder-energy/Source --file ./mock-data-holder-energy/Source/Dockerfile.integration-tests --tag mock-data-holder-energy-integration-tests-energy:latest
+    # List docker images
+    - name: List Docker images
+      run: |
+        docker images
+    # Run unit tests
+    - name: Run unit tests
+      run: |
+        docker-compose -f './mock-data-holder-energy/Source/docker-compose.UnitTests.yml' up --abort-on-container-exit --exit-code-from mock-data-holder-energy-unit-tests
+    # Remove unit tests
+    - name: Remove unit tests
+      run: |
+        docker-compose -f './mock-data-holder-energy/Source/docker-compose.UnitTests.yml' down
+    # Run integration tests
+    - name: Run integration tests
+      run: |
+        docker-compose -f './mock-data-holder-energy/Source/docker-compose.IntegrationTests.yml' up --abort-on-container-exit --exit-code-from mock-data-holder-energy-integration-tests
+    # Remove integration tests
+    - name: Remove integration tests
+      run: |
+        docker-compose -f './mock-data-holder-energy/Source/docker-compose.IntegrationTests.yml' down
+    # Publish Unit Test Results
+    - name: Publish Unit Test Report
+      uses: dorny/test-reporter@v1
+      with:
+        artifact: unit-test-results
+        name: Unit Tests
+        path: './mock-data-holder-energy/Source/_temp/mock-data-holder-energy-unit-tests/testresults/*.trx'
+        reporter: dotnet-trx
+
+    # Publish Integration Test Results
+    - name: Publish Integration Test Report
+      uses: dorny/test-reporter@v1
+      with:
+        artifact: integration-test-results
+        name: Integration Tests
+        path: './mock-data-holder-energy/Source/_temp/mock-data-holder-energy-integration-tests/testresults/*.trx'
+        reporter: dotnet-trx
+
+    - name: List contents
+      if: always()
+      run: |
+        ls
+    # Publish log files from containers.
+    - name: Archive container logs
+      uses: actions/upload-artifact@v2
+      if: always()
+      with:
+        name: container-logs-artifacts
+        path: | 
+          ./mock-register/Source/_temp/mock-register/tmp
+          ./mock-data-holder-energy/Source/_temp/mock-data-holder-energy/tmp
