@@ -123,7 +123,7 @@ jobs:
         path: ${{ github.workspace }}/mock-data-holder-energy/Source/_temp/mock-data-holder-energy/tmp
 
     # Archive mock register logs
-    - name: Archive mock reister logs
+    - name: Archive mock register logs
       uses: actions/upload-artifact@v2
       if: always()
       with:
