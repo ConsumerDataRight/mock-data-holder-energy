@@ -104,7 +104,7 @@ jobs:
       if: always()
       with:
         name: unit-test-results
-        path: ${{ github.workspace }}/mock-data-holder-energy/Source/_temp/mock-data-holder-energy-unit-tests-energy/testresults
+        path: ${{ github.workspace }}/mock-data-holder-energy/Source/_temp/mock-data-holder-energy-unit-tests/testresults
 
     # Archive integration test results
     - name: Archive integration test results
@@ -112,7 +112,7 @@ jobs:
       if: always()
       with:
         name: integration-test-results
-        path: ${{ github.workspace }}/mock-data-holder-energy/Source/_temp/mock-data-holder-energy-integration-tests-energy/testresults
+        path: ${{ github.workspace }}/mock-data-holder-energy/Source/_temp/mock-data-holder-energy-integration-tests/testresults
 
     # Archive mock data holder energy logs
     - name: Archive mock data holder energy logs
@@ -128,4 +128,4 @@ jobs:
       if: always()
       with:
         name: integration-test-artifacts
-        path: ${{ github.workspace }}/mock-register/Source/_temp/mock-register/tmp
+        path: ${{ github.workspace }}/mock-data-holder-energy/Source/_temp/mock-register/tmp
