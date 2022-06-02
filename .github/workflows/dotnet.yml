@@ -35,7 +35,7 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     
-    ## NOTE: This workflow needs to also checkout the Mock Register for testing.
+    ## NOTE: This workflow needs to also checkout the Mock Register for testing. 
     ##  This workflow will checkout the ConsumerDataRight/mock-register project
 
     steps:

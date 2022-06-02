@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Person information in seed data.
-- Build and Test action to download containers from docker hub. 
+- Build and Test action to download containers from docker hub.
 
 ### Fixed
 - Intermittent issue when creating the LogEventsManageAPI database table.
