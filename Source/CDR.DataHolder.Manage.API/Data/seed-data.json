@@ -10,9 +10,9 @@
 				"LastName": "Moss",
 				"MiddleNames": "",
 				"Prefix": "Ms",
-				"Suffix": "",
-				"OccupationCode": "",
-				"OccupationCodeVersion": "",
+				"Suffix": null,
+				"OccupationCode": null,
+				"OccupationCodeVersion": null,
 				"LastUpdateTime": "2021-04-01T10:30:00Z"
 			},
 			"Accounts": [
@@ -188,9 +188,9 @@
 				"LastName": "Hare",
 				"MiddleNames": "",
 				"Prefix": "Ms",
-				"Suffix": "",
-				"OccupationCode": "",
-				"OccupationCodeVersion": "",
+				"Suffix": null,
+				"OccupationCode": null,
+				"OccupationCodeVersion": null,
 				"LastUpdateTime": "2021-12-01T10:30:00Z"
 			},
 			"Accounts": [
@@ -237,9 +237,9 @@
 				"LastName": "Johnson",
 				"MiddleNames": "",
 				"Prefix": "Mr",
-				"Suffix": "",
-				"OccupationCode": "",
-				"OccupationCodeVersion": "",
+				"Suffix": null,
+				"OccupationCode": null,
+				"OccupationCodeVersion": null,
 				"LastUpdateTime": "2021-07-01T10:30:00Z"
 			},
 			"Accounts": [
@@ -302,9 +302,9 @@
 				"LastName": "Wilson",
 				"MiddleNames": "",
 				"Prefix": "Mr",
-				"Suffix": "",
-				"OccupationCode": "",
-				"OccupationCodeVersion": "",
+				"Suffix": null,
+				"OccupationCode": null,
+				"OccupationCodeVersion": null,
 				"LastUpdateTime": "2020-03-01T10:30:00Z"
 			},
 			"Accounts": [
@@ -383,9 +383,9 @@
 				"LastName": "Robertson",
 				"MiddleNames": "",
 				"Prefix": "Mr",
-				"Suffix": "",
-				"OccupationCode": "",
-				"OccupationCodeVersion": "",
+				"Suffix": null,
+				"OccupationCode": null,
+				"OccupationCodeVersion": null,
 				"LastUpdateTime": "2020-05-01T10:30:00Z"
 			},
 			"Accounts": [
