@@ -11,6 +11,7 @@ using CDR.DataHolder.Resource.API.Business.Models;
 using CDR.DataHolder.Resource.API.Business.Responses;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Serilog.Context;
 using System;
@@ -28,18 +29,22 @@ namespace CDR.DataHolder.Resource.API.Controllers
 	{
 		private readonly IResourceRepository _resourceRepository;
 		private readonly IStatusRepository _statusRepository;
+		private readonly IConfiguration _config;
 		private readonly IMapper _mapper;
 		private readonly ILogger<ResourceController> _logger;
 		private readonly IIdPermanenceManager _idPermanenceManager;
 
-		public ResourceController(IResourceRepository resourceRepository,
-									IStatusRepository statusRepository,
-									IMapper mapper,
-									ILogger<ResourceController> logger,
-									IIdPermanenceManager idPermanenceManager)
+		public ResourceController(
+			IResourceRepository resourceRepository,
+			IStatusRepository statusRepository,
+			IConfiguration config,
+			IMapper mapper,
+			ILogger<ResourceController> logger,
+			IIdPermanenceManager idPermanenceManager)
 		{
 			_resourceRepository = resourceRepository;
 			_statusRepository = statusRepository;
+			_config = config;
 			_mapper = mapper;
 			_logger = logger;
 			_idPermanenceManager = idPermanenceManager;
@@ -78,7 +83,7 @@ namespace CDR.DataHolder.Resource.API.Controllers
 				return BadRequest();
 			}
 
-			response.Links = this.GetLinks("GetCustomer");
+			response.Links = this.GetLinks(nameof(GetCustomer), _config);
 
 			return Ok(response);
 		}
@@ -139,7 +144,7 @@ namespace CDR.DataHolder.Resource.API.Controllers
 			_idPermanenceManager.EncryptIds(response.Data.Accounts, idParameters, a => a.AccountId);
 
 			// Set pagination meta data
-			response.Links = this.GetLinks(nameof(GetEnergyAccounts), pageNumber, response.Meta.TotalPages.GetValueOrDefault(), pageSizeNumber);
+			response.Links = this.GetLinks(nameof(GetEnergyAccounts), _config, pageNumber, response.Meta.TotalPages.GetValueOrDefault(), pageSizeNumber);
 
 			return Ok(response);
 		}
@@ -227,7 +232,7 @@ namespace CDR.DataHolder.Resource.API.Controllers
 			var response = _mapper.Map<EnergyConcessionsResponse>(consessions);
 
 			// Set pagination meta data
-			response.Links = this.GetLinks(nameof(GetConsessions));
+			response.Links = this.GetLinks(nameof(GetConsessions), _config);
 
 			return Ok(response);
 		}

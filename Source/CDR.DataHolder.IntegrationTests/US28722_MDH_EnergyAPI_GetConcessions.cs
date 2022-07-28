@@ -47,15 +47,16 @@ namespace CDR.DataHolder.IntegrationTests
                 .Where(accountConcession => accountConcession.Account.AccountId == accountId)
                 .Select(accountConcession => new
                 {
+                    type = accountConcession.Type,
                     displayName = accountConcession.DisplayName,
                     additionalInfo = accountConcession.AdditionalInfo,
                     additionalInfoUri = accountConcession.AdditionalInfoUri,
                     startDate = (accountConcession.StartDate ?? DateTime.MinValue).ToString("yyyy-MM-dd") ?? "",
                     endDate = (accountConcession.EndDate ?? DateTime.MinValue).ToString("yyyy-MM-dd") ?? "",
-                    dailyDiscount = accountConcession.DailyDiscount.ToString(),
-                    monthlyDiscount = accountConcession.MonthlyDiscount.ToString(),
-                    yearlyDiscount = accountConcession.YearlyDiscount.ToString(),
-                    percentageDiscount = accountConcession.PercentageDiscount.ToString(),
+                    discountFrequency = accountConcession.DiscountFrequency,
+                    amount = accountConcession.Amount,
+                    percentage = accountConcession.Percentage,
+                    appliedTo = (accountConcession.AppliedTo ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries),
                 })
                 .ToList();
 

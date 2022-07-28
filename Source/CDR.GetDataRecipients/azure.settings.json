@@ -1,0 +1,14 @@
+{
+  "Values": {
+    "StorageConnectionString": "",
+    "Schedule": ""
+  },
+  "ConnectionStrings": {
+    "DataHolder_DB": "",
+    "DataHolder_Logging_DB": ""
+  },
+  "Register": {
+    "GetDataRecipientsEndpoint": "",
+    "xvVersion": ""
+  }
+}

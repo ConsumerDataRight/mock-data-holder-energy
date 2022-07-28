@@ -6,6 +6,7 @@ using IdentityServer4.EntityFramework.DbContexts;
 using IdentityServer4.EntityFramework.Mappers;
 using IdentityServer4.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using static CDR.DataHolder.IdentityServer.CdsConstants;
 
@@ -13,7 +14,10 @@ namespace CDR.DataHolder.IdentityServer.Stores
 {
     public class DynamicClientStore : ClientStore
     {
-        public DynamicClientStore(ILogger<ClientStore> logger, ConfigurationDbContext configurationDbContext):base(logger, configurationDbContext)
+        public DynamicClientStore(
+            ILogger<ClientStore> logger, 
+            ConfigurationDbContext configurationDbContext,
+            IDistributedCache cache) :base(logger, configurationDbContext, cache)
         {
         }
 
