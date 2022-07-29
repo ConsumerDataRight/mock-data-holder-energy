@@ -59,6 +59,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CDR.DataHolder.IdentityServ
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CDR.DataHolder.Resource.API.UnitTests", "CDR.DataHolder.Resource.API.UnitTests\CDR.DataHolder.Resource.API.UnitTests.csproj", "{97F4558A-39C5-4FD4-957F-DD501806FCFB}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CDR.GetDataRecipients", "CDR.GetDataRecipients\CDR.GetDataRecipients.csproj", "{E353178F-9B75-4281-85A7-A66FF04277EA}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "070 Functions", "070 Functions", "{B98275D2-3CED-483A-AAC5-089F4CEC5CF2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -117,6 +121,10 @@ Global
 		{97F4558A-39C5-4FD4-957F-DD501806FCFB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{97F4558A-39C5-4FD4-957F-DD501806FCFB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{97F4558A-39C5-4FD4-957F-DD501806FCFB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E353178F-9B75-4281-85A7-A66FF04277EA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E353178F-9B75-4281-85A7-A66FF04277EA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E353178F-9B75-4281-85A7-A66FF04277EA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E353178F-9B75-4281-85A7-A66FF04277EA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -136,6 +144,7 @@ Global
 		{415CBC4D-1D03-48DF-990D-9131A1B26CCE} = {4138CD99-F0DC-4834-9277-F5F9EF1858B8}
 		{DA885983-0FDE-4FB1-930A-D89907BA213C} = {3EB538FD-A7A0-49BE-BE0F-37E097BEB9CD}
 		{97F4558A-39C5-4FD4-957F-DD501806FCFB} = {3FCA902C-521F-4634-9DC0-9D75ABDE55C5}
+		{E353178F-9B75-4281-85A7-A66FF04277EA} = {B98275D2-3CED-483A-AAC5-089F4CEC5CF2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {23C8BB22-2F34-4A7F-AA09-33AD01E0D3A9}

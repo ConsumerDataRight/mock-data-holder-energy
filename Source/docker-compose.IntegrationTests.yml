@@ -25,8 +25,8 @@ services:
         condition: service_healthy
 
   mock-data-holder-energy:
-    container_name: mock-data-holder-energy
-    image: mock-data-holder-energy
+    container_name: mock-data-holder-energy-for-testing
+    image: mock-data-holder-energy-for-testing
     hostname: mock-data-holder-energy
     ports: 
       - "8100:8100"
@@ -35,7 +35,7 @@ services:
       - "8105:8105"
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.for-testing
     environment:
       - ASPNETCORE_ENVIRONMENT=Release
     volumes:

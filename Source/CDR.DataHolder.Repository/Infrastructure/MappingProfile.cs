@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+﻿using System;
+using AutoMapper;
 using CDR.DataHolder.Repository.Entities;
 using DomainEntities = CDR.DataHolder.Domain.Entities;
 namespace CDR.DataHolder.Repository.Infrastructure
@@ -12,10 +13,9 @@ namespace CDR.DataHolder.Repository.Infrastructure
 			CreateMap<AccountConcession, DomainEntities.EnergyAccountConcession>()
 				.ForMember(dest => dest.StartDate, source => source.MapFrom(source => source.StartDate.HasValue ? source.StartDate.Value.ToString("yyyy-MM-dd") : null))
 				.ForMember(dest => dest.EndDate, source => source.MapFrom(source => source.EndDate.HasValue ? source.EndDate.Value.ToString("yyyy-MM-dd") : null))
-				.ForMember(dest => dest.DailyDiscount, source => source.MapFrom(source => source.DailyDiscount.HasValue ? source.DailyDiscount.Value.ToString("F2") : null))
-				.ForMember(dest => dest.MonthlyDiscount, source => source.MapFrom(source => source.MonthlyDiscount.HasValue ? source.MonthlyDiscount.Value.ToString("F2") : null))
-				.ForMember(dest => dest.YearlyDiscount, source => source.MapFrom(source => source.YearlyDiscount.HasValue ? source.YearlyDiscount.Value.ToString("F2") : null))
-				.ForMember(dest => dest.PercentageDiscount, source => source.MapFrom(source => source.PercentageDiscount.HasValue ? source.PercentageDiscount.Value.ToString(): null))
+				.ForMember(dest => dest.Amount, source => source.MapFrom(source => string.IsNullOrEmpty(source.Amount) ? null : decimal.Parse(source.Amount).ToString("F2")))
+				.ForMember(dest => dest.Percentage, source => source.MapFrom(source => string.IsNullOrEmpty(source.Percentage) ? null : decimal.Parse(source.Percentage).ToString("F2")))
+				.ForMember(dest => dest.AppliedTo, source => source.MapFrom(source => string.IsNullOrEmpty(source.AppliedTo) ? Array.Empty<string>() :  source.AppliedTo.Split(',', StringSplitOptions.RemoveEmptyEntries)))
 				.ReverseMap();
 			CreateMap<ServicePoint, DomainEntities.EnergyServicePoint>()
 				.ReverseMap();

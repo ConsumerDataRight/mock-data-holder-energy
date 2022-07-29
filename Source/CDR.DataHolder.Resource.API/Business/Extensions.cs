@@ -6,21 +6,37 @@ using CDR.DataHolder.Resource.API.Business.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Primitives;
 
 namespace CDR.DataHolder.Resource.API.Business
 {
     public static class Extensions
 	{
-		public static Links GetLinks(this ControllerBase controller, string routeName, int? currentPage = null, int totalPages = 0, int? pageSize = null)
+		public static string GetHostName(this string url)
 		{
-			string forwardedHost = null;
-			if (controller.Request.Headers.TryGetValue("X-Forwarded-Host", out StringValues forwardedHosts))
-			{
-				forwardedHost = forwardedHosts.First();
-			}
+			return url.Replace("https://", "").Replace("http://", "").Split('/')[0];
+		}
 
-			var selfLink = ReplaceUriHost(controller.Request.GetDisplayUrl(), forwardedHost);
+		public static Links GetLinks(this ControllerBase controller, string routeName, IConfiguration configuration, int? currentPage = null, int totalPages = 0, int? pageSize = null)
+		{
+			var resourceBaseUri = configuration.GetValue<string>("ResourceBaseUri");
+			var currentUrl = controller.Request.GetDisplayUrl();
+			var selfLink = new Uri(currentUrl);
+
+			if (string.IsNullOrEmpty(resourceBaseUri))
+			{
+				if (controller.Request.Headers.TryGetValue("X-Forwarded-Host", out StringValues forwardedHosts))
+				{
+					selfLink = ReplaceUriHost(currentUrl, forwardedHosts.First());
+				}
+			}
+			else
+			{
+				var resourceHostName = resourceBaseUri.GetHostName();
+				var currentHostName = currentUrl.GetHostName();
+				selfLink = new Uri(currentUrl.Replace(currentHostName, resourceHostName));
+			}
 
 			// Construct the non-paginated links.
 			if (currentPage == null || totalPages == 0)
@@ -87,7 +103,7 @@ namespace CDR.DataHolder.Resource.API.Business
 			var uriBuilder = new UriBuilder(url);
 			if (!string.IsNullOrEmpty(newHost))
 			{
-				var segments = newHost.Split(':');
+				var segments = newHost.Replace("https://", "").Split(':');
 				uriBuilder.Host = segments[0];
 
 				if (segments.Length > 1)
