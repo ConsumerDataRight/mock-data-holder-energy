@@ -1,6 +1,6 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
-using CDR.DataHolder.Repository.Entities;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace CDR.DataHolder.Repository.Entities
 {
@@ -13,6 +13,8 @@ namespace CDR.DataHolder.Repository.Entities
 		public string AccountId { get; set; }
 		public virtual Account Account { get; set; }
 
+		[MaxLength(1000), Required]
+		public string Type { get; set; }
 		[Required, MaxLength(100)]
 		public string DisplayName { get; set; }
 		[MaxLength(1000)]
@@ -21,9 +23,13 @@ namespace CDR.DataHolder.Repository.Entities
 		public string AdditionalInfoUri { get; set; }
 		public DateTime? StartDate { get; set; }
 		public DateTime? EndDate { get; set; }
-		public decimal? DailyDiscount { get; set; }
-		public decimal? MonthlyDiscount { get; set; }
-		public decimal? YearlyDiscount { get; set; }
-		public decimal? PercentageDiscount { get; set; }
+		[MaxLength(1000)] 
+		public string DiscountFrequency { get; set; }
+		[MaxLength(1000)]
+		public string Amount { get; set; }
+		[MaxLength(1000)]
+		public string Percentage { get; set; }
+		[MaxLength(1000)]
+		public string AppliedTo { get; set; }
 	}
 }

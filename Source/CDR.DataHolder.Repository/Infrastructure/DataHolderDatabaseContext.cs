@@ -24,6 +24,7 @@ namespace CDR.DataHolder.Repository.Infrastructure
 		public DbSet<Brand> Brands { get; set; }
 		public DbSet<SoftwareProduct> SoftwareProducts { get; set; }
 
+		public DbSet<LogEventsDrService> LogEventsDrService { get; set; }
 		public DbSet<LogEventsManageAPI> LogEventsManageAPI { get; set; }
 
 		// Energy schema

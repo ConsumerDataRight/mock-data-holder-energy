@@ -1,6 +1,6 @@
 ![Consumer Data Right Logo](https://raw.githubusercontent.com/ConsumerDataRight/mock-data-holder-energy/main/cdr-logo.png) 
 
-[![Consumer Data Standards v1.16.0](https://img.shields.io/badge/Consumer%20Data%20Standards-v1.16.0-blue.svg)](https://consumerdatastandardsaustralia.github.io/standards-archives/standards-1.16.0/#introduction)
+[![Consumer Data Standards v1.17.0](https://img.shields.io/badge/Consumer%20Data%20Standards-v1.17.0-blue.svg)](https://consumerdatastandardsaustralia.github.io/standards/#introduction)
 [![FAPI 1.0 Advanced Profile](https://img.shields.io/badge/FAPI%201.0-orange.svg)](https://openid.net/specs/openid-financial-api-part-2-1_0.html)
 [![made-with-dotnet](https://img.shields.io/badge/Made%20with-.NET-1f425Ff.svg)](https://dotnet.microsoft.com/)
 [![made-with-csharp](https://img.shields.io/badge/Made%20with-C%23-1f425Ff.svg)](https://docs.microsoft.com/en-us/dotnet/csharp/)
@@ -13,7 +13,7 @@ This project includes source code, documentation and instructions for a Consumer
 This repository contains a mock implementation of a Mock Data Holder Energy and is offered to help the community in the development and testing of their CDR solutions.
 
 ## Mock Data Holder Energy - Alignment
-The Mock Data Holder Energy aligns to [v1.16.0](https://consumerdatastandardsaustralia.github.io/standards-archives/standards-1.16.0/#introduction) of the [Consumer Data Standards](https://consumerdatastandardsaustralia.github.io/standards/#introduction).
+The Mock Data Holder Energy aligns to [v1.17.0](https://consumerdatastandardsaustralia.github.io/standards/#introduction) of the [Consumer Data Standards](https://consumerdatastandardsaustralia.github.io/standards/#introduction).
 The Mock Data Holder Energy is based on the [Mock Data Holder](https://github.com/ConsumerDataRight/mock-data-holder) codebase. The [Mock Data Holder](https://github.com/ConsumerDataRight/mock-data-holder) has passed v3.2 of the [Conformance Test Suite for Data Holders](https://www.cdr.gov.au/for-providers/conformance-test-suite-data-holders). Conformance Testing specific to the Mock Data Holder Energy has not yet been completed. 
 The Mock Data Holder Energy is compliant with the [FAPI 1.0 Advanced Profile](https://openid.net/specs/openid-financial-api-part-2-1_0.html).
 The Mock Data Holder Energy aligns to [FAPI 1.0 Migration Phase 2](https://consumerdatastandardsaustralia.github.io/standards-archives/standards-1.16.0/#authentication-flows).
@@ -115,6 +115,9 @@ The following diagram outlines the high level architecture of the Mock Data Hold
 
 [<img src="https://raw.githubusercontent.com/ConsumerDataRight/mock-data-holder-energy/main/mock-data-holder-energy-architecture.png" height='600' width='800' alt="Mock Data Holder Energy - Architecture"/>](https://raw.githubusercontent.com/ConsumerDataRight/mock-data-holder-energy/main/mock-data-holder-energy-architecture.png)
 
+Get Data Recipients discovery Azure Function:
+
+[<img src="mock-data-holder-discovery-architecture.png"  height='250' width='360' alt="Get Data Recipients discovery function"/>](mock-data-holder-discovery-architecture.png)
 
 ## Mock Data Holder Energy - Components
 The Mock Data Holder Energy contains the following components:
@@ -140,6 +143,9 @@ The Mock Data Holder Energy contains the following components:
   - Not part of the Consumer Data Standards, but allows for the maintenance of data in the Mock Data Holder Energy repository.
   - Also includes trigger points to refresh the Data Recipient, Data Recipient Status and Software Product Status from the Mock Register.
   - A user interface may be added at some time in the future to provide user friendly access to the repository data.
+- Azure Function
+  - An Azure Function that can automate the continuous Get Data Recipients discovery process.
+  - To get help on the Azure Functions, see the [help guide](./Help/azurefunctions/HELP.md).
 - Repository
   - A SQL database containing Mock Data Holder Energy data.
 

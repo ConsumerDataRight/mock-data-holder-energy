@@ -52,7 +52,9 @@
 							"DisplayName": "Pensioner",
 							"StartDate": "2019-01-01",
 							"EndDate": "2020-01-01",
-							"yearlyDiscount": "87.20"
+							"Type": "FIXED_AMOUNT",
+							"Amount": "87.20",
+							"DiscountFrequency": "P1Y"
 						}
 					]
 				},
@@ -279,14 +281,18 @@
 							"DisplayName": "Student",
 							"StartDate": "2020-06-01",
 							"EndDate": "2021-01-01",
-							"DailyDiscount": "0.13"
+							"Type": "FIXED_AMOUNT",
+							"Amount": "0.13",
+							"DiscountFrequency": "P1D"
 						},
 						{
 							"AccountConcessionId": "f40834f4-22eb-4e53-86f2-cd48bf1a35a6",
 							"DisplayName": "Student Graduate",
 							"StartDate": "2021-01-01",
 							"EndDate": "2021-06-01",
-							"DailyDiscount": "0.11"
+							"Type": "FIXED_AMOUNT",
+							"Amount": "0.11",
+							"DiscountFrequency": "P1D"
 						}
 					]
 				}
@@ -367,7 +373,9 @@
 							"DisplayName": "Loyalty Bonus",
 							"StartDate": "2020-06-01",
 							"EndDate": "2022-01-01",
-							"percentageDiscount": "7.5"
+							"Type": "FIXED_PERCENTAGE",
+							"Percentage": "7.5",
+							"DiscountFrequency": "P1M"
 						}
 					]
 				}
@@ -448,14 +456,18 @@
 							"DisplayName": "Veteran",
 							"StartDate": "2019-06-01",
 							"EndDate": "2020-01-01",
-							"percentageDiscount": "23"
+							"Type": "FIXED_PERCENTAGE",
+							"Percentage": "23",
+							"DiscountFrequency": "P1Y"
 						},
 						{
 							"AccountConcessionId": "0696ae92-f851-487b-8e34-50bbf9387aa9",
 							"DisplayName": "Pension",
 							"StartDate": "2019-06-01",
 							"EndDate": "2022-06-01",
-							"dailyDiscount": "0.29"
+							"Type": "FIXED_AMOUNT",
+							"Amount": "0.29",
+							"DiscountFrequency": "P1D"
 						}
 					]
 				}

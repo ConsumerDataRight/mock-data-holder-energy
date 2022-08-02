@@ -1,11 +1,9 @@
-﻿using CDR.DataHolder.IdentityServer.Configuration;
-using CDR.DataHolder.IdentityServer.Interfaces;
+﻿using CDR.DataHolder.IdentityServer.Interfaces;
 using CDR.DataHolder.IdentityServer.Models;
 using CDR.DataHolder.IdentityServer.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 using Serilog.Context;
 using System;
@@ -115,7 +113,7 @@ namespace CDR.DataHolder.IdentityServer.Services
 
             // Call the DR's arrangement revocation endpoint.
             var httpResponse = await _clientArrangementRevocationEndpointHttpClient.PostToArrangementRevocationEndPoint(
-                (await GetFormValues(cdrArrangementId, useJwt)), 
+                (await GetFormValues(cdrArrangementId, brandId, revocationUri.ToString(), useJwt)), 
                 signedBearerTokenJwt, 
                 revocationUri);
 
@@ -150,19 +148,33 @@ namespace CDR.DataHolder.IdentityServer.Services
             return $"{plaintext}.{signature}";
         }
 
-        private async Task<Dictionary<string, string>> GetFormValues(string cdrArrangementId, bool useJwt = false)
+        private async Task<Dictionary<string, string>> GetFormValues(
+            string cdrArrangementId, 
+            string brandId,
+            string audience,
+            bool useJwt = false)
         {
             var formValues = new Dictionary<string, string>();
 
             if (useJwt)
             {
-                var jwt = new JwtSecurityToken(claims: new Claim[] { new Claim(CdrArrangementRevocationRequest.CdrArrangementJwt, cdrArrangementId) });
+                var jwt = new JwtSecurityToken(
+                    issuer: brandId,
+                    audience: audience,
+                    expires: DateTime.UtcNow.AddMinutes(_defaultExpiryMinutes),
+                    claims: new Claim[] { 
+                        new Claim(CdrArrangementRevocationRequest.CdrArrangementId, cdrArrangementId),
+                        new Claim(JwtRegisteredClaimNames.Sub, brandId),
+                        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()) 
+                    });
                 formValues.Add(CdrArrangementRevocationRequest.CdrArrangementJwt, (await GetSignedJwt(jwt)));
             }
             else
             {
                 formValues.Add(CdrArrangementRevocationRequest.CdrArrangementId, cdrArrangementId);
             }
+
+            _logger.LogInformation("Arrangement revocation request using {form}:{form_value} ", formValues.First().Key, formValues.First().Value);
 
             return formValues;
         }

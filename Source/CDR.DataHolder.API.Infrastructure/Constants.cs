@@ -14,11 +14,19 @@
             public static class Energy
             {
                 public const string AccountsBasicRead = "energy:accounts.basic:read";
+                public const string AccountsDetailRead = "energy:accounts.detail:read";
                 public const string ConcessionsRead = "energy:accounts.concessions:read";
+                public const string ServicePointsBasicRead = "energy:electricity.servicepoints.basic:read";
+                public const string ServicePointsDetailRead = "energy:electricity.servicepoints.detail:read";
+                public const string ElectricityUsageRead = "energy:electricity.usage:read";
+                public const string ElectricityDerRead = "energy:electricity.der:read";
+                public const string EnergyAccountsPaymentScheduleRead = "energy:accounts.paymentschedule:read";
+                public const string EnergyBillingRead = "energy:billing:read";
             }
             public static class Common
             {
                 public const string CustomerBasicRead = "common:customer.basic:read";
+                public const string CustomerDetailRead = "common:customer.detail:read";
             }
         }
 

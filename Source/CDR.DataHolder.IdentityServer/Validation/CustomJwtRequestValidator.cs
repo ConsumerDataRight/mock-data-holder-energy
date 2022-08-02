@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using CDR.DataHolder.API.Infrastructure.Extensions;
 using CDR.DataHolder.IdentityServer.Configuration;
+using CDR.DataHolder.IdentityServer.Services;
 using IdentityModel;
 using IdentityServer4.Extensions;
 using IdentityServer4.Models;
@@ -26,15 +27,20 @@ namespace CDR.DataHolder.IdentityServer.Validation
     {
         private readonly IConfiguration _configuration;
         private readonly ILogger _logger;
+        private readonly IClientService _clientService;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CustomJwtRequestValidator"/> class.
         /// Instantiates an instance of private_key_jwt secret validator
         /// </summary>
-        public CustomJwtRequestValidator(IConfiguration configuration, ILogger<CustomJwtRequestValidator> logger)
+        public CustomJwtRequestValidator(
+            IConfiguration configuration, 
+            ILogger<CustomJwtRequestValidator> logger,
+            IClientService clientService)
         {
             _configuration = configuration;
             _logger = logger;
+            _clientService = clientService;
         }
 
         /// <summary>
@@ -136,7 +142,7 @@ namespace CDR.DataHolder.IdentityServer.Validation
         /// <param name="keys">The keys</param>
         /// <param name="client">The client</param>
         /// <returns></returns>
-        protected virtual Task<JwtSecurityToken> ValidateJwtAsync(string jwtTokenString, IEnumerable<SecurityKey> keys, Client client)
+        protected virtual async Task<JwtSecurityToken> ValidateJwtAsync(string jwtTokenString, IEnumerable<SecurityKey> keys, Client client)
         {
             var validAudiences = new List<string>
             {
@@ -195,9 +201,9 @@ namespace CDR.DataHolder.IdentityServer.Validation
             };
 
             var handler = new JwtSecurityTokenHandler();
+            await _clientService.EnsureKid(client.ClientId, jwtTokenString, tokenValidationParameters);
             handler.ValidateToken(jwtTokenString, tokenValidationParameters, out var token);
-
-            return Task.FromResult((JwtSecurityToken)token);
+            return (JwtSecurityToken)token;
         }
 
         /// <summary>
