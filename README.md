@@ -1,6 +1,7 @@
 ![Consumer Data Right Logo](https://raw.githubusercontent.com/ConsumerDataRight/mock-data-holder-energy/main/cdr-logo.png) 
 
 [![Consumer Data Standards v1.17.0](https://img.shields.io/badge/Consumer%20Data%20Standards-v1.17.0-blue.svg)](https://consumerdatastandardsaustralia.github.io/standards/#introduction)
+[![Conformance Test Suite 4.0](https://img.shields.io/badge/Conformance%20Test%20Suite-v4.0-darkblue.svg)](https://www.cdr.gov.au/for-providers/conformance-test-suite-data-holders)
 [![FAPI 1.0 Advanced Profile](https://img.shields.io/badge/FAPI%201.0-orange.svg)](https://openid.net/specs/openid-financial-api-part-2-1_0.html)
 [![made-with-dotnet](https://img.shields.io/badge/Made%20with-.NET-1f425Ff.svg)](https://dotnet.microsoft.com/)
 [![made-with-csharp](https://img.shields.io/badge/Made%20with-C%23-1f425Ff.svg)](https://docs.microsoft.com/en-us/dotnet/csharp/)
