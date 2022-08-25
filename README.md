@@ -14,7 +14,7 @@ This repository contains a mock implementation of a Mock Data Holder Energy and 
 
 ## Mock Data Holder Energy - Alignment
 The Mock Data Holder Energy aligns to [v1.17.0](https://consumerdatastandardsaustralia.github.io/standards/#introduction) of the [Consumer Data Standards](https://consumerdatastandardsaustralia.github.io/standards/#introduction).
-The Mock Data Holder Energy is based on the [Mock Data Holder](https://github.com/ConsumerDataRight/mock-data-holder) codebase. The [Mock Data Holder](https://github.com/ConsumerDataRight/mock-data-holder) has passed v3.2 of the [Conformance Test Suite for Data Holders](https://www.cdr.gov.au/for-providers/conformance-test-suite-data-holders). Conformance Testing specific to the Mock Data Holder Energy has not yet been completed. 
+The Mock Data Holder Energy passed v4.0 of the [Conformance Test Suite for Data Holders](https://www.cdr.gov.au/for-providers/conformance-test-suite-data-holders). 
 The Mock Data Holder Energy is compliant with the [FAPI 1.0 Advanced Profile](https://openid.net/specs/openid-financial-api-part-2-1_0.html).
 The Mock Data Holder Energy aligns to [FAPI 1.0 Migration Phase 2](https://consumerdatastandardsaustralia.github.io/standards/#authentication-flows).
 
