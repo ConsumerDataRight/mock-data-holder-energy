@@ -4,6 +4,7 @@ using CDR.DataHolder.API.Infrastructure.Filters;
 using CDR.DataHolder.API.Infrastructure.IdPermanence;
 using CDR.DataHolder.API.Infrastructure.Middleware;
 using CDR.DataHolder.API.Infrastructure.Models;
+using CDR.DataHolder.API.Logger;
 using CDR.DataHolder.Domain.Repositories;
 using CDR.DataHolder.Repository;
 using CDR.DataHolder.Repository.Infrastructure;
@@ -84,6 +85,12 @@ namespace CDR.DataHolder.Resource.API
 
             services.AddAutoMapper(typeof(Startup), typeof(DataHolderDatabaseContext));
             services.AddScoped<LogActionEntryAttribute>();
+
+            if (Configuration.GetSection("SerilogRequestResponseLogger") != null)
+            {
+                Log.Logger.Information("Adding request response logging middleware");
+                services.AddRequestResponseLogging();
+            }
         }
 
         private static void AddAuthenticationAuthorization(IServiceCollection services, IConfiguration configuration)
@@ -182,6 +189,7 @@ namespace CDR.DataHolder.Resource.API
             }
 
             app.UseSerilogRequestLogging();
+            app.UseMiddleware<RequestResponseLoggingMiddleware>();
 
             // ExceptionHandlingMiddleware must be first in the line, so it will catch all unhandled exceptions.
             app.UseMiddleware<ResourceAuthoriseErrorHandlingMiddleware>();

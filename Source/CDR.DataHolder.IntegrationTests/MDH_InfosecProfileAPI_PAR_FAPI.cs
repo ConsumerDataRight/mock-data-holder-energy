@@ -15,10 +15,10 @@ using System.Net.Http.Headers;
 
 namespace CDR.DataHolder.IntegrationTests
 {
-    public class MDH_InfosecProfileAPI_PAR_FAPI : BaseTest, IClassFixture<RegisterSoftwareProductFixture>
+    public class USX00001_MDH_InfosecProfileAPI_PAR_FAPI : BaseTest, IClassFixture<RegisterSoftwareProductFixture>
     {
         [Fact]
-        public async Task FAPI_AC_AudienceAsParUri_ShouldRespondWith_400BadRequest()
+        public async Task ACX01_FAPI_AudienceAsParUri_ShouldRespondWith_400BadRequest()
         {
             // Arrange
             var aud = BaseTest.DH_TLS_IDENTITYSERVER_BASE_URL + "/connect/par";
@@ -36,12 +36,11 @@ namespace CDR.DataHolder.IntegrationTests
                 var expectedResponse = @"{""error"":""invalid_request_object"",""error_description"":""JWT validation error""}";
 
                 await Assert_HasContent_Json(expectedResponse, response.Content);
-
             }
         }
 
         [Fact]
-        public async Task FAPI_AC_InvalidAudience_ShouldRespondWith_400BadRequest()
+        public async Task ACX02_FAPI_InvalidAudience_ShouldRespondWith_400BadRequest()
         {
             // Arrange
             var aud = "https://invalid.issuer";
@@ -59,12 +58,11 @@ namespace CDR.DataHolder.IntegrationTests
                 var expectedResponse = @"{""error"":""invalid_request_object"",""error_description"":""JWT validation error""}";
 
                 await Assert_HasContent_Json(expectedResponse, response.Content);
-
             }
         }
 
         [Fact]
-        public async Task FAPI_AC_NoNbfClaim_ShouldRespondWith_400BadRequest()
+        public async Task ACX03_FAPI_NoNbfClaim_ShouldRespondWith_400BadRequest()
         {
             // Arrange
 
@@ -85,7 +83,7 @@ namespace CDR.DataHolder.IntegrationTests
         }
 
         [Fact]
-        public async Task FAPI_AC_NoExpClaim_ShouldRespondWith_400BadRequest()
+        public async Task ACX04_FAPI_NoExpClaim_ShouldRespondWith_400BadRequest()
         {
             // Arrange
 
@@ -106,7 +104,7 @@ namespace CDR.DataHolder.IntegrationTests
         }
 
         [Fact]
-        public async Task FAPI_AC_ExpiredRequestObject_ShouldRespondWith_400BadRequest()
+        public async Task ACX05_FAPI_ExpiredRequestObject_ShouldRespondWith_400BadRequest()
         {
             // Arrange
 
@@ -127,7 +125,7 @@ namespace CDR.DataHolder.IntegrationTests
         }
 
         [Fact]
-        public async Task FAPI_AC_NbfGreaterThan60Mins_ShouldRespondWith_400BadRequest()
+        public async Task ACX06_FAPI_NbfGreaterThan60Mins_ShouldRespondWith_400BadRequest()
         {
             // Arrange
 
@@ -148,7 +146,7 @@ namespace CDR.DataHolder.IntegrationTests
         }
 
         [Fact]
-        public async Task FAPI_AC_ExpGreaterThan60Mins_ShouldRespondWith_400BadRequest()
+        public async Task ACX07_FAPI_ExpGreaterThan60Mins_ShouldRespondWith_400BadRequest()
         {
             // Arrange
 
@@ -169,7 +167,7 @@ namespace CDR.DataHolder.IntegrationTests
         }
 
         [Fact]
-        public async Task FAPI_AC_NoRequestObject_ShouldRespondWith_400BadRequest()
+        public async Task ACX08_FAPI_NoRequestObject_ShouldRespondWith_400BadRequest()
         {
             // Arrange
 
@@ -190,7 +188,7 @@ namespace CDR.DataHolder.IntegrationTests
         }
 
         [Fact]
-        public async Task FAPI_AC_WithRequestUri_ShouldRespondWith_400BadRequest()
+        public async Task ACX09_FAPI_WithRequestUri_ShouldRespondWith_400BadRequest()
         {
             // Arrange
 
@@ -211,7 +209,7 @@ namespace CDR.DataHolder.IntegrationTests
         }
 
         [Fact]
-        public async Task FAPI_AC_WithInvalidRedirectUri_ShouldRespondWith_400BadRequest()
+        public async Task ACX10_FAPI_WithInvalidRedirectUri_ShouldRespondWith_400BadRequest()
         {
             // Arrange
 
@@ -232,7 +230,7 @@ namespace CDR.DataHolder.IntegrationTests
         }
 
         [Fact]
-        public async Task FAPI_AC_WithResponseModeQuery_ShouldRespondWith_400BadRequest()
+        public async Task ACX11_FAPI_WithResponseModeQuery_ShouldRespondWith_400BadRequest()
         {
             // Arrange
 
@@ -253,7 +251,7 @@ namespace CDR.DataHolder.IntegrationTests
         }
 
         [Fact]
-        public async Task FAPI_AC_AuthorizeWithNoRequestOrRequestUri_ShouldRespondWith_400BadRequest()
+        public async Task ACX12_FAPI_AuthorizeWithNoRequestOrRequestUri_ShouldRespondWith_400BadRequest()
         {
             // Arrange
             var url = $"{BaseTest.DH_TLS_IDENTITYSERVER_BASE_URL}/connect/authorize?client_id=3e6c5f3d-bd58-4aaa-8c23-acfec837b506&redirect_uri=https://www.certification.openid.net/test/a/cdr-mdh/callback&scope=openid%20profile%20common:customer.basic:read%20energy:accounts.basic:read%20energy:accounts.concessions:read%20cdr:registration&claims=%7B%22id_token%22:%7B%22acr%22:%7B%22value%22:%22urn:cds.au:cdr:2%22,%22essential%22:true%7D%7D,%22sharing_duration%22:7776000%7D&state=XhnoTrPAlD&nonce=IkUxjBqVuJ&response_type=code%20id_token";
@@ -275,6 +273,5 @@ namespace CDR.DataHolder.IntegrationTests
                 response.RequestMessage.RequestUri.PathAndQuery.Should().StartWith("/home/error");
             }
         }
-
     }
 }
