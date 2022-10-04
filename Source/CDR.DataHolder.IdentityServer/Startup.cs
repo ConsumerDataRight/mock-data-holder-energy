@@ -3,6 +3,7 @@ using CDR.DataHolder.API.Infrastructure.Authorization;
 using CDR.DataHolder.API.Infrastructure.Filters;
 using CDR.DataHolder.API.Infrastructure.IdPermanence;
 using CDR.DataHolder.API.Infrastructure.Models;
+using CDR.DataHolder.API.Logger;
 using CDR.DataHolder.Domain.Repositories;
 using CDR.DataHolder.IdentityServer.ClientAuthentication;
 using CDR.DataHolder.IdentityServer.Configuration;
@@ -241,6 +242,12 @@ namespace CDR.DataHolder.IdentityServer
 
             services.AddScoped<LogActionEntryAttribute>();
 
+            if (_configuration.GetSection("SerilogRequestResponseLogger") != null)
+            {
+                Log.Logger.Information("Adding request response logging middleware");
+                services.AddRequestResponseLogging();
+            }
+
         }
 
         private bool UseDistributedCache()
@@ -322,6 +329,7 @@ namespace CDR.DataHolder.IdentityServer
         public static void Configure(IApplicationBuilder app, IWebHostEnvironment env, IConfiguration configuration, ILogger<Startup> logger)
         {
             app.UseSerilogRequestLogging();
+            app.UseMiddleware<RequestResponseLoggingMiddleware>();
 
             var basePath = configuration.GetValue<string>(Constants.ConfigurationKeys.BasePath, "");
             if (!string.IsNullOrEmpty(basePath))
@@ -431,6 +439,7 @@ namespace CDR.DataHolder.IdentityServer
                     { CdsConstants.Discovery.TokenEndpointAuthenticationMethodsSupported, new string[] { CdsConstants.EndpointAuthenticationMethods.PrivateKeyJwt } },
                     { CdsConstants.Discovery.TlsClientCertificateBoundAccessTokens, true },
                     { CdsConstants.Discovery.ClaimsParameterSupported, true },
+                    { CdsConstants.Discovery.ResponseModesSupported , new string[] { CdsConstants.ResponseModes.FormPost, CdsConstants.ResponseModes.Fragment } },
                 };
 
             foreach (var entry in extended)
