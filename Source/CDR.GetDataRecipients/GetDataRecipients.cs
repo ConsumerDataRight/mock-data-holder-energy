@@ -153,6 +153,14 @@ namespace CDR.GetDataRecipients
                         }
                     }
                 }
+                // Delete all existing if there are no data recipients in register.
+                else if (dhDataRecipients.Any())
+                {
+                    foreach (var dhDr in dhDataRecipients)
+                    {
+                        delDataRecipients.Add(dhDr);
+                    }
+                }
 
                 // INSERT Register Data Recipients including its child Brands and Software Products into Data Holder repo
                 if (insDataRecipients.Any())
@@ -255,6 +263,16 @@ namespace CDR.GetDataRecipients
                     return;
                 }
 
+                // Check if there are more brands than register
+                var dhExtraDrBrands = dhDataRecipient.Brands.ExceptBy(regDataRecipient.Brands.Select(b => b.BrandId), b => b.BrandId);
+                if (dhExtraDrBrands.Any())
+                {
+                    foreach (var brand in dhExtraDrBrands)
+                    {
+                        delBrands.Add(brand);
+                    }
+                }
+
                 foreach (var regDrBrand in regDataRecipient.Brands)
                 {
                     // Register Data Recipient -> Legal Entity and Brand ONLY - NO Software Products
@@ -279,7 +297,7 @@ namespace CDR.GetDataRecipients
                         // Register Data Recipient -> Legal Entity, Brands and Software Products
                         foreach (var regDrSwProd in regDrBrand.SoftwareProducts)
                         {
-                            await CompareRegToDh(dhDataRecipients, regDataRecipient, regDrBrand, regDrSwProd, insBrands, insSwProds, delSwProds, updDataRecipients);
+                            await CompareRegToDh(dhDataRecipients, regDataRecipient, regDrBrand, regDrSwProd, insBrands, insSwProds, delBrands, delSwProds, updDataRecipients);
                         }
                     }
                 }
@@ -290,7 +308,10 @@ namespace CDR.GetDataRecipients
             }
         }
 
-        private static async Task CompareRegToDh(IList<LegalEntity> dhDataRecipients, LegalEntity regDr, Brand regDrBrand, SoftwareProduct regDrSwProd, IList<Brand> insBrands, IList<SoftwareProduct> insSwProds, IList<SoftwareProduct> delSwProds, IList<LegalEntity> updDrs)
+        private static async Task CompareRegToDh(
+             IList<LegalEntity> dhDataRecipients, LegalEntity regDr, Brand regDrBrand, SoftwareProduct regDrSwProd,
+             IList<Brand> insBrands, IList<SoftwareProduct> insSwProds,
+             IList<Brand> delBrands, IList<SoftwareProduct> delSwProds, IList<LegalEntity> updDrs)
         {
             try
             {
@@ -326,6 +347,12 @@ namespace CDR.GetDataRecipients
                     // DOES the Data Holder repo differ to Register?
                     foreach (var dhDrBrand in dhDataRecipient.Brands)
                     {
+                        // Check if the brand has already been marked for deletion
+                        if (delBrands.Any(db => db.BrandId == dhDrBrand.BrandId))
+                        {
+                            continue;
+                        }
+
                         if (dhDrBrand.SoftwareProducts.Count > regDrBrand.SoftwareProducts.Count)
                         {
                             foreach (var dhSwProd in dhDrBrand.SoftwareProducts)
