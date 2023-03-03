@@ -14,7 +14,7 @@ namespace CDR.DataHolder.IntegrationTests.Infrastructure.API2
         public string? ClientId { get; init; } = BaseTest.SOFTWAREPRODUCT_ID.ToLower();
         public string? RedirectUri { get; init; } = BaseTest.SOFTWAREPRODUCT_REDIRECT_URI_FOR_INTEGRATION_TESTS;
         public string? Scope { get; init; } = BaseTest.SCOPE;
-        public string? Aud { get; init; } = BaseTest.DH_TLS_IDENTITYSERVER_BASE_URL;
+        public string? Aud { get; init; } = BaseTest.DH_TLS_AUTHSERVER_BASE_URL;
         public string? ResponseMode { get; init; } = "fragment";
         public string? JwtCertificateFilename { get; init; } = null;
         public string? JwtCertificatePassword { get; init; } = null;

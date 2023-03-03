@@ -1,10 +1,14 @@
 using System;
-using System.Net;
-using System.Net.Http;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
-using System.Web;
-using HtmlAgilityPack;
+using Microsoft.Data.SqlClient;
+using Dapper;
+using System.Collections.Generic;
+using System.Net.Http;
+using Microsoft.AspNetCore.WebUtilities;
+using System.Net;
+using Microsoft.Playwright;
+using FluentAssertions;
+using CDR.DataHolder.IntegrationTests.Models;
 
 #nullable enable
 
@@ -15,432 +19,188 @@ namespace CDR.DataHolder.IntegrationTests.Infrastructure.API2
 
     public class DataHolder_Authorise_APIv2
     {
-        /// <summary>
-        /// The customer's userid with the DataHolder - eg "jwilson"
-        /// </summary>
         public string? UserId { get; init; }
-
-        /// <summary>
-        /// The OTP (One-time password) that is sent to the customer (via sms etc) so the DataHolder can authenticate the Customer.
-        /// For the mock solution use "000789"
-        /// </summary>
         public string? OTP { get; init; }
-
-        /// <summary>
-        /// Comma delimited list of account ids the user is granting consent for
-        /// </summary>
         public string? SelectedAccountIds { get; init; }
+        protected string[]? SelectedAccountIdsArray => SelectedAccountIds?.Split(",");
 
-        private string[]? SelectedAccountIdsArray => SelectedAccountIds?.Split(",");
+        private string[]? _selectedAccountDisplayNames = null;
+        protected string[]? SelectedAccountDisplayNames
+        {
+            get
+            {
+                if (_selectedAccountDisplayNames == null)
+                {
+                    List<string> list = new();
 
-        /// <summary>
-        /// Scope
-        /// </summary>
+                    if (SelectedAccountIdsArray != null)
+                    {
+                        using var connection = new SqlConnection(BaseTest.DATAHOLDER_CONNECTIONSTRING);
+                        foreach (var accountId in SelectedAccountIdsArray)
+                        {
+                            var displayName = connection.QuerySingle<string>("select displayName from account where accountId = @AccountId", new { AccountId = accountId });
+                            list.Add(displayName);
+                        }
+                    }
+                    _selectedAccountDisplayNames = list.ToArray();
+                }
+
+                return _selectedAccountDisplayNames;
+            }
+        }
+
         public string Scope { get; init; } = BaseTest.SCOPE;
-
-        /// <summary>
-        /// Lifetime (in seconds) of the access token
-        /// </summary>
         public int TokenLifetime { get; init; } = 3600;
-
-        /// <summary>
-        /// Lifetime (in seconds) of the CDR arrangement.
-        /// 7776000 = 90 days
-        /// </summary>
-        public int SharingDuration { get; init; } = 7776000;
-
+        public int SharingDuration { get; init; } = BaseTest.SHARING_DURATION;
         public string? RequestUri { get; init; }
-
         public string CertificateFilename { get; init; } = BaseTest.CERTIFICATE_FILENAME;
         public string CertificatePassword { get; init; } = BaseTest.CERTIFICATE_PASSWORD;
-
-
-        public string ClientId { get; init; } = BaseTest.SOFTWAREPRODUCT_ID.ToLower();
-        // public string RedirectURI { get; init; } = BaseTest.SOFTWAREPRODUCT_REDIRECT_URI_FOR_INTEGRATION_TESTS;
-        public string RedirectURI { get; init; } = BaseTest.SubstituteConstant(BaseTest.SOFTWAREPRODUCT_REDIRECT_URI_FOR_INTEGRATION_TESTS);
+        public string ClientId { get; init; } = BaseTest.GetClientId(BaseTest.SOFTWAREPRODUCT_ID).ToLower();
+        public string RedirectURI { get; init; } = BaseTest.SOFTWAREPRODUCT_REDIRECT_URI_FOR_INTEGRATION_TESTS;
         public string JwtCertificateFilename { get; init; } = BaseTest.JWT_CERTIFICATE_FILENAME;
         public string JwtCertificatePassword { get; init; } = BaseTest.JWT_CERTIFICATE_PASSWORD;
-        public string CodeVerifier { get; set; }
 
         /// <summary>
         /// Perform authorisation and consent flow. Returns authCode and idToken
         /// </summary>
-        public async Task<(string authCode, string idToken)> AuthoriseWithRequestObject()
+        public async Task<(string authCode, string idToken)> Authorise(string redirectUrl = BaseTest.SOFTWAREPRODUCT_REDIRECT_URI_FOR_INTEGRATION_TESTS)
         {
-            // Create cookie container since we need to share cookies across multiple requests
-            var cookieContainer = new CookieContainer();
+            redirectUrl = BaseTest.SubstituteConstant(redirectUrl);
 
-            // Call authorise endpoint, it will redirect to DataHolder login endpoint
-            var authResponse = await IdentityServer_AuthoriseWithRequestObject(cookieContainer);
+            const string RESPONSETYPE = "code id_token";
+            const string RESPONSEMODE = "form_post";
+            Uri authRedirectUri = await Authorise_GetRedirectUri(RESPONSETYPE, RESPONSEMODE, redirectUrl);
 
-            // Set userid and postback
-            var userIdResponse = await DataHolder_Login_UserId(cookieContainer, authResponse);
-
-            // Set password and postback, it will validate user then redirect to IdentityServer which will redirect to DataHolder consent endpoint
-            var passwordResponse = await DataHolder_Login_Password(cookieContainer, userIdResponse);
-
-            // Select accounts to share and postback
-            var selectAccountsResponse = await DataHolder_Consent_SelectAccountsToShare(cookieContainer, passwordResponse);
-
-            (var authCode, var idToken) = await DataHolder_Consent_Confirm(cookieContainer, selectAccountsResponse);
-
-            return (authCode, idToken);
+            return await Authorize_Consent(authRedirectUri, RESPONSEMODE);
         }
 
-        /// <summary>
-        /// Perform authorisation and consent flow. Returns authCode and idToken
-        /// </summary>
-        public async Task<(string authCode, string idToken, string codeVerifier)> Authorise()
+        // Call authorise endpoint, should respond with a redirect to auth UI, return the redirect URI
+        private async Task<Uri> Authorise_GetRedirectUri(string responseType, string responseMode, string redirectURI)
         {
-            if (this.CodeVerifier == null)
+            var clientId = IntegrationTests.BaseTest.GetClientId(IntegrationTests.BaseTest.SOFTWAREPRODUCT_ID);
+
+            var queryString = new Dictionary<string, string?>
             {
-                this.CodeVerifier = string.Concat(System.Guid.NewGuid().ToString(), '-', System.Guid.NewGuid().ToString());
-            }
-
-            // Create cookie container since we need to share cookies across multiple requests
-            var cookieContainer = new CookieContainer();
-
-            // Call authorise endpoint, it will redirect to DataHolder login endpoint
-            var authResponse = await IdentityServer_Authorise(cookieContainer);
-
-            // Set userid and postback
-            var userIdResponse = await DataHolder_Login_UserId(cookieContainer, authResponse);
-
-            // Set password and postback, it will validate user then redirect to IdentityServer which will redirect to DataHolder consent endpoint
-            var passwordResponse = await DataHolder_Login_Password(cookieContainer, userIdResponse);
-
-            // Select accounts to share and postback
-            var selectAccountsResponse = await DataHolder_Consent_SelectAccountsToShare(cookieContainer, passwordResponse);
-
-            (var authCode, var idToken) = await DataHolder_Consent_Confirm(cookieContainer, selectAccountsResponse);
-
-            return (authCode, idToken, this.CodeVerifier);
-        }
-
-        // Create http client with cookie container
-        private HttpClient CreateHttpClient(CookieContainer cookieContainer, bool allowAutoRedirect = true)
-        {
-            var httpClientHandler = new HttpClientHandler
-            {
-                UseDefaultCredentials = true,
-                AllowAutoRedirect = allowAutoRedirect,
-                UseCookies = true,
-                CookieContainer = cookieContainer,
+                { "request_uri", RequestUri },
+                { "response_type", responseType },
+                { "response_mode", responseMode },
+                { "client_id", clientId },
+                { "redirect_uri", redirectURI },
+                { "scope", IntegrationTests.BaseTest.SCOPE },
             };
 
-            httpClientHandler.ServerCertificateCustomValidationCallback += (sender, cert, chain, sslPolicyErrors) => true;
-            httpClientHandler.ClientCertificates.Add(new X509Certificate2(CertificateFilename, CertificatePassword, X509KeyStorageFlags.Exportable));
-            var httpClient = new HttpClient(httpClientHandler);
+            var api = new IntegrationTests.Infrastructure.API
+            {
+                CertificateFilename = IntegrationTests.BaseTest.CERTIFICATE_FILENAME,
+                CertificatePassword = IntegrationTests.BaseTest.CERTIFICATE_PASSWORD,
+                HttpMethod = HttpMethod.Get,
+                URL = QueryHelpers.AddQueryString($"{IntegrationTests.BaseTest.DH_TLS_AUTHSERVER_BASE_URL}/connect/authorize", queryString),
+            };
 
-            return httpClient;
+            var response = await api.SendAsync(AllowAutoRedirect: false);
+
+            var redirectlocation = response.Headers.Location;
+
+            if (response.StatusCode != HttpStatusCode.Redirect)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                var doc = new HtmlAgilityPack.HtmlDocument();
+                doc.LoadHtml(content);
+                var error = doc.DocumentNode.SelectSingleNode("//input[@name='error']").Attributes["value"].Value;
+                var errorDescription = doc.DocumentNode.SelectSingleNode("//input[@name='error_description']").Attributes["value"].Value;
+
+                throw new AuthoriseException("Expected {HttpStatusCode.Redirect} but {response.StatusCode}", response.StatusCode, error, errorDescription);
+            }
+
+            return response.Headers.Location ?? throw new NullReferenceException(nameof(response.Headers.Location.AbsoluteUri));
         }
 
-        private async Task<HttpResponseMessage?> IdentityServer_AuthoriseWithRequestObject(CookieContainer cookieContainer)
+
+        private async Task<(string authCode, string idToken)> Authorize_Consent(Uri authRedirectUri, string responseMode)
         {
-            var URL = new AuthoriseURLBuilder
+            var authRedirectLeftPart = authRedirectUri.GetLeftPart(UriPartial.Authority) + "/ui";
+
+            string? code = null;
+            string? idtoken = null;
+
+            await PlaywrightHelper2.Execute(async (page) =>
             {
-                Scope = Scope,
-                TokenLifetime = TokenLifetime,
-                SharingDuration = SharingDuration,
-                RequestUri = RequestUri,
-                ClientId = ClientId,
-                RedirectURI = RedirectURI,
-                JWT_CertificateFilename = JwtCertificateFilename,
-                JWT_CertificatePassword = JwtCertificatePassword,
-            }.URL;
+                // Perform consent flow            
+                await page.GotoAsync(authRedirectUri.AbsoluteUri); // redirect user to Auth UI to login and consent to share accounts
 
-            var request = new HttpRequestMessage(HttpMethod.Get, URL);
+                await page.Locator("h6:has-text(\"Mock Data Holder Energy\")").TextContentAsync();
+                await page.Locator("h5:has-text(\"Login\")").TextContentAsync();
 
-            // Start DataRecipientConsentCallback in case request fails (since dataholder will send a redirect with error to the callback uri)
-            var callback = new DataRecipientConsentCallback(redirectUrl: RedirectURI);
+                // Username
+                await page.Locator("input[type=\"text\"]").FillAsync(UserId ?? throw new NullReferenceException(nameof(UserId)));
+                await page.Locator("[aria-label=\"continue\"]").ClickAsync();
+
+                // OTP
+                await Task.Delay(3000);
+                await page.Locator("input[type=\"text\"]").FillAsync(OTP ?? throw new NullReferenceException(nameof(OTP)));
+                await page.Locator("text=Continue").ClickAsync();
+
+                // Select accounts
+                await page.WaitForURLAsync($"{authRedirectLeftPart}/select-accounts");
+
+                if (SelectedAccountDisplayNames != null)
+                {
+                    foreach (string displayName in SelectedAccountDisplayNames)
+                    {
+                        await page.Locator($"li >> id=account-{displayName}").ClickAsync();
+                    }
+                }
+                await page.Locator("text=Continue").ClickAsync();
+
+                // Confirmation - Click authorise and check callback response
+                await page.WaitForURLAsync($"{authRedirectLeftPart}/confirmation");
+
+                (code, idtoken) = await HybridFlow_HandleCallback(redirectUri: RedirectURI, responseMode: responseMode, page: page, setup: async (page) =>
+                {
+                    await page.Locator("text=Authorise").ClickAsync();
+                });
+            });
+
+            return (
+                authCode: code ?? throw new NullReferenceException(nameof(code)),
+                idToken: idtoken ?? throw new NullReferenceException(nameof(idtoken))
+            );
+        }
+
+        private delegate Task HybridFlow_HandleCallback_Setup(IPage page);
+        static private async Task<(string code, string idtoken)> HybridFlow_HandleCallback(string redirectUri, string responseMode, IPage page, HybridFlow_HandleCallback_Setup setup)
+        {
+            var callback = new IntegrationTests.Infrastructure.API2.DataRecipientConsentCallback(redirectUri);
             callback.Start();
             try
             {
-                var response = await CreateHttpClient(cookieContainer).SendAsync(request);
-                if (response.StatusCode != HttpStatusCode.OK)
-                {
-                    throw new Exception($"{nameof(DataHolder_Authorise_APIv2)}.{nameof(IdentityServer_AuthoriseWithRequestObject)} - Response.StatusCode={response.StatusCode}, Response.Content={await response.Content.ReadAsStringAsync()}, request.RequestUri={request.RequestUri}");
-                }
+                await setup(page);
 
-                var responseFragment = response?.RequestMessage?.RequestUri?.Fragment;
-                if (responseFragment?.StartsWith("#error=invalid_request") ?? false)
+                var callbackRequest = await callback.WaitForCallback();
+                switch (responseMode)
                 {
-                    throw new NotSupportedException($"{nameof(DataHolder_Authorise_APIv2)}.{nameof(IdentityServer_AuthoriseWithRequestObject)} - Request failed with request object. RequestUri={URL}, RequestUri Scope={Scope}, RedirectUri={response?.RequestMessage?.RequestUri}");
-                }
+                    case "form_post":
+                        {
+                            callbackRequest.Should().NotBeNull();
+                            callbackRequest?.received.Should().BeTrue();
+                            callbackRequest?.method.Should().Be(HttpMethod.Post);
+                            callbackRequest?.body.Should().NotBeNullOrEmpty();
 
-                return response;
+                            var body = QueryHelpers.ParseQuery(callbackRequest?.body);
+                            var code = body["code"];
+                            var id_token = body["id_token"];
+                            return (code, id_token);
+                        }
+                    case "fragment":
+                    case "query":
+                    default:
+                        throw new NotSupportedException(nameof(responseMode));
+                }
             }
             finally
             {
                 await callback.Stop();
             }
-        }
-
-        private async Task<HttpResponseMessage?> IdentityServer_Authorise(CookieContainer cookieContainer)
-        {
-            var requestUri = this.RequestUri;
-
-            if (string.IsNullOrEmpty(requestUri))
-            {
-                // Send the PAR request.
-                var response = await DataHolder_Par_API.SendRequest(
-                    clientId: this.ClientId,
-                    scope: this.Scope,
-                    sharingDuration: this.SharingDuration,
-                    redirectUri: this.RedirectURI,
-                    codeVerifier: this.CodeVerifier,
-                    certificateFilename: this.CertificateFilename,
-                    certificatePassword: this.CertificatePassword,
-                    jwtCertificateForClientAssertionFilename: this.JwtCertificateFilename,
-                    jwtCertificateForClientAssertionPassword: this.JwtCertificatePassword,
-                    jwtCertificateForRequestObjectFilename: this.JwtCertificateFilename,
-                    jwtCertificateForRequestObjectPassword: this.JwtCertificatePassword);
-
-                if (response.StatusCode != HttpStatusCode.Created) throw new Exception("Error with PAR request - StatusCode");
-
-                var parResponse = await DataHolder_Par_API.DeserializeResponse(response);
-                if (string.IsNullOrEmpty(parResponse?.RequestURI)) throw new Exception("Error with PAR request - RequestURI");
-
-                requestUri = parResponse?.RequestURI;
-            }
-
-            var URL = new AuthoriseURLBuilder
-            {
-                Scope = Scope,
-                TokenLifetime = TokenLifetime,
-                SharingDuration = SharingDuration,
-                RequestUri = requestUri,
-                ClientId = ClientId,
-                RedirectURI = RedirectURI,
-                JWT_CertificateFilename = JwtCertificateFilename,
-                JWT_CertificatePassword = JwtCertificatePassword,
-            }.URL;
-
-            var request = new HttpRequestMessage(HttpMethod.Get, URL);
-
-            // Start DataRecipientConsentCallback in case request fails (since dataholder will send a redirect with error to the callback uri)
-            var callback = new DataRecipientConsentCallback(redirectUrl: RedirectURI);
-            callback.Start();
-            try
-            {
-                var response = await CreateHttpClient(cookieContainer).SendAsync(request);
-                if (response.StatusCode != HttpStatusCode.OK)
-                {
-                    throw new Exception($"{nameof(DataHolder_Authorise_APIv2)}.{nameof(IdentityServer_Authorise)} - Response.StatusCode={response.StatusCode}, Response.Content={await response.Content.ReadAsStringAsync()}, request.RequestUri={request.RequestUri}");
-                }
-
-                var responseFragment = response?.RequestMessage?.RequestUri?.Fragment;
-                if (responseFragment?.StartsWith("#error=invalid_request") ?? false)
-                {
-                    throw new NotSupportedException($"{nameof(DataHolder_Authorise_APIv2)}.{nameof(IdentityServer_Authorise)} - Request failed with request object. RequestUri={URL}, RequestUri Scope={Scope}, RedirectUri={response?.RequestMessage?.RequestUri}");
-                }
-
-                return response;
-            }
-            finally
-            {
-                await callback.Stop();
-            }
-        }
-
-        // Handle redirect to DataHolder login endpoint, set userid (customer id) and postback 
-        private async Task<HttpResponseMessage?> DataHolder_Login_UserId(CookieContainer cookieContainer, HttpResponseMessage? authResponse)
-        {
-            if (authResponse == null || authResponse.StatusCode != HttpStatusCode.OK)
-            {
-                throw new Exception($"{nameof(DataHolder_Authorise_APIv2)}.{nameof(DataHolder_Login_UserId)} - {nameof(authResponse)} not 200OK");
-            }
-
-            // Load html
-            var html = await authResponse.Content.ReadAsStringAsync();
-            var htmlDoc = new HtmlDocument();
-            htmlDoc.LoadHtml(html);
-
-            // Parse the form 
-            var formFields = HtmlParser.ParseForm(html, "//form");
-            formFields["CustomerId"] = UserId;
-            formFields["button"] = "page2";
-
-            // Postback
-            var requestUri = authResponse?.RequestMessage?.RequestUri?.AbsoluteUri;
-            var request = new HttpRequestMessage(HttpMethod.Post, requestUri)
-            {
-                Content = HtmlParser.FormUrlEncodedContent(formFields),
-            };
-            var response = await CreateHttpClient(cookieContainer).SendAsync(request);
-            return response;
-        }
-
-        // Set password and postback, DataHolder will validate user and redirect to IdentityServer which will then redirect to DataHolder consent endpoint
-        private async Task<HttpResponseMessage?> DataHolder_Login_Password(CookieContainer cookieContainer, HttpResponseMessage? userIdResponse) //, IEnumerable<string> cookies)
-        {
-            if (userIdResponse == null || userIdResponse.StatusCode != HttpStatusCode.OK)
-            {
-                throw new Exception($"{nameof(DataHolder_Authorise_APIv2)}.{nameof(DataHolder_Login_Password)} - {nameof(userIdResponse)} not 200OK");
-            }
-
-            // Load html
-            var html = await userIdResponse.Content.ReadAsStringAsync();
-
-            // Check that customer id was valid
-            if (html.Contains("Incorrect customer ID", StringComparison.InvariantCultureIgnoreCase))
-            {
-                throw new EDataHolder_Authorise_IncorrectCustomerId();
-            }
-
-            var htmlDoc = new HtmlDocument();
-            htmlDoc.LoadHtml(html);
-
-            // Parse the form
-            var formFields = HtmlParser.ParseForm(html, "//form");
-            formFields["Otp"] = OTP;
-            formFields["button"] = "auth";
-
-            // Postback
-            var requestUri = userIdResponse?.RequestMessage?.RequestUri?.AbsoluteUri;
-            var request = new HttpRequestMessage(HttpMethod.Post, requestUri)
-            {
-                Content = HtmlParser.FormUrlEncodedContent(formFields)
-            };
-            var response = await CreateHttpClient(cookieContainer).SendAsync(request);
-            return response;
-        }
-
-        // Select user bank accounts to share and postback 
-        private async Task<HttpResponseMessage?> DataHolder_Consent_SelectAccountsToShare(CookieContainer cookieContainer, HttpResponseMessage? passwordResponse) //, IEnumerable<string> cookies)
-        {
-            if (passwordResponse == null || passwordResponse.StatusCode != HttpStatusCode.OK)
-            {
-                throw new Exception($"{nameof(DataHolder_Authorise_APIv2)}.{nameof(DataHolder_Consent_SelectAccountsToShare)} - {nameof(passwordResponse)} not 200OK");
-            }
-
-            // Load html
-            var html = await passwordResponse.Content.ReadAsStringAsync();
-
-            // Check that password was valid
-            if (html.Contains("Incorrect one time password", StringComparison.InvariantCultureIgnoreCase))
-            {
-                throw new EDataHolder_Authorise_IncorrectOneTimePassword();
-            }
-
-            var htmlDoc = new HtmlDocument();
-            htmlDoc.LoadHtml(html);
-
-            // Parse the form
-            var formFields = HtmlParser.ParseForm(html, "//form");
-
-            // Set selected accounts
-            if (SelectedAccountIdsArray != null)
-            {
-                int i = 0;
-                foreach (string selectedAccountId in SelectedAccountIdsArray)
-                {
-                    formFields[$"SelectedAccountIds[{i++}]"] = selectedAccountId;
-                }
-            }
-            formFields["button"] = "page2";
-
-            // Postback
-            string? requestUri = passwordResponse?.RequestMessage?.RequestUri?.AbsoluteUri;
-            var request = new HttpRequestMessage(HttpMethod.Post, requestUri)
-            {
-                Content = HtmlParser.FormUrlEncodedContent(formFields)
-            };
-            var response = await CreateHttpClient(cookieContainer).SendAsync(request);
-            return response;
-        }
-
-        // Confirm selection of accounts and postback 
-        private async Task<(string authCode, string idToken)> DataHolder_Consent_Confirm(CookieContainer cookieContainer, HttpResponseMessage? selectAccountsResponse)
-        {
-            async Task<(string authCode, string idToken)> Postback(HttpRequestMessage request)
-            {
-                // Upon postback of consent, IdentityServer will redirect to the Data Recipient's redirect url with the authcode etc
-                // We need to start a webhost (DataRecipientConsentCallback) to catch the callback
-                var callback = new DataRecipientConsentCallback(redirectUrl: RedirectURI);
-                callback.Start();
-                try
-                {
-                    // The redirect will happen once we post the callback
-                    var response = await CreateHttpClient(cookieContainer).SendAsync(request);
-
-                    var fragment = response.RequestMessage?.RequestUri?.Fragment;
-                    if (fragment == null)
-                    {
-                        throw new Exception($"{nameof(DataHolder_Consent_Confirm)}.{nameof(Postback)} - failed");
-                    }
-
-                    var query = HttpUtility.ParseQueryString(fragment.TrimStart('#'));
-
-                    Exception RaiseException(string errorMessage)
-                    {
-                        var authCode = query?["code"];
-                        var idToken = query?["id_token"];
-                        var responseRequestUri = response?.RequestMessage?.RequestUri;
-
-                        return new Exception($"{errorMessage}\r\nauthCode={authCode},idToken={idToken},response.RequestMessage.RequestUri={responseRequestUri}");
-                    }
-
-                    var authCode = query["code"];
-                    if (authCode == null)
-                    {
-                        throw RaiseException("authCode is null");
-                    }
-
-                    var idToken = query["id_token"];
-                    if (idToken == null)
-                    {
-                        throw RaiseException("idToken is null");
-                    }
-
-                    var state = query["state"];
-                    var nonce = query["nonce"];
-                    var scope = query["scope"];
-
-                    return (authCode, idToken);
-                }
-                finally
-                {
-                    await callback.Stop();
-                }
-            }
-
-            if (selectAccountsResponse == null || selectAccountsResponse.StatusCode != HttpStatusCode.OK)
-            {
-                throw new Exception($"{nameof(DataHolder_Authorise_APIv2)}.{nameof(DataHolder_Consent_Confirm)} - {nameof(selectAccountsResponse)} not 200OK");
-            }
-
-            // Load html
-            var html = await selectAccountsResponse.Content.ReadAsStringAsync();
-            var htmlDoc = new HtmlDocument();
-            htmlDoc.LoadHtml(html);
-
-            // Parse the form
-            var formFields = HtmlParser.ParseForm(html, "//form");
-            formFields.Remove("SelectedAccountIds");
-            for (int i = 0; i < 99; i++)
-            {
-                formFields.Remove($"SelectedAccountIds[{i}]");
-            }
-            if (SelectedAccountIdsArray != null)
-            {
-                int i = 0;
-                foreach (string selectedAccountId in SelectedAccountIdsArray)
-                {
-                    formFields[$"SelectedAccountIds[{i++}]"] = selectedAccountId;
-                }
-            }
-            formFields["button"] = "consent";
-
-            // Postback
-            string? requestUri = selectAccountsResponse?.RequestMessage?.RequestUri?.AbsoluteUri;
-            var request = new HttpRequestMessage(HttpMethod.Post, requestUri)
-            {
-                Content = HtmlParser.FormUrlEncodedContent(formFields)
-            };
-            (var authCode, var idToken) = await Postback(request);
-
-            return (authCode, idToken);
         }
     }
 }

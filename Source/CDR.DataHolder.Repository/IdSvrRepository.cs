@@ -33,18 +33,5 @@ namespace CDR.DataHolder.Repository
 				.FirstOrDefaultAsync();
 		}
 
-		public async Task<SoftwareProduct> GetSoftwareProduct(Guid softwareProductId)
-		{
-			return await _dataHolderDatabaseContext.SoftwareProducts.AsNoTracking()
-				.Include(softwareProduct => softwareProduct.Brand.LegalEntity)
-				.Where(softwareProduct => softwareProduct.SoftwareProductId == softwareProductId)
-				.Select(x => new SoftwareProduct()
-				{
-					SoftwareProductId = x.SoftwareProductId,
-					Status = x.Status
-				})
-				.FirstOrDefaultAsync();
-		}
-
 	}
 }

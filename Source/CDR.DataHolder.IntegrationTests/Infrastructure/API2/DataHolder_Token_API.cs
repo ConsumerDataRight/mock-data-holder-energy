@@ -51,7 +51,6 @@ namespace CDR.DataHolder.IntegrationTests.Infrastructure.API2
             string? refreshToken = null,
             string? customClientAssertion = null,
             string? scope = null,
-            string? codeVerifier = null,
             string? redirectUri = BaseTest.SOFTWAREPRODUCT_REDIRECT_URI_FOR_INTEGRATION_TESTS,
             string? certificateFilename = BaseTest.CERTIFICATE_FILENAME,
             string? certificatePassword = BaseTest.CERTIFICATE_PASSWORD,
@@ -131,10 +130,7 @@ namespace CDR.DataHolder.IntegrationTests.Infrastructure.API2
                 formFields.Add(new KeyValuePair<string?, string?>("scope", scope));
             }
 
-            if (codeVerifier != null)
-            {
-                formFields.Add(new KeyValuePair<string?, string?>("code_verifier", codeVerifier));
-            }
+            formFields.Add(new KeyValuePair<string?, string?>("code_verifier", BaseTest.FAPI_PHASE2_CODEVERIFIER)); 
 
             var content = new FormUrlEncodedContent(formFields);
 
@@ -166,9 +162,9 @@ namespace CDR.DataHolder.IntegrationTests.Infrastructure.API2
         /// <summary>
         /// Use authCode to get access token
         /// </summary>
-        static public async Task<string?> GetAccessToken(string authCode, string codeVerifier)
+        static public async Task<string?> GetAccessToken(string authCode)
         {
-            var responseMessage = await SendRequest(authCode, codeVerifier: codeVerifier);
+            var responseMessage = await SendRequest(authCode);
             if (responseMessage.StatusCode != HttpStatusCode.OK)
             {
                 throw new Exception($"{nameof(GetAccessToken)} - Error getting access token");
@@ -181,25 +177,26 @@ namespace CDR.DataHolder.IntegrationTests.Infrastructure.API2
         /// <summary>
         /// Use authCode to get tokens. 
         /// </summary>
-        static public async Task<Response?> GetResponse(
-            string authCode, 
-            int? shareDuration = null,
+        static public async Task<Response?> GetResponse(string authCode, int? shareDuration = null,
             string? clientId = BaseTest.SOFTWAREPRODUCT_ID,
             string? redirectUri = BaseTest.SOFTWAREPRODUCT_REDIRECT_URI_FOR_INTEGRATION_TESTS,
-            string? codeVerifier = null,
             string? certificateFilename = BaseTest.CERTIFICATE_FILENAME,
             string? certificatePassword = BaseTest.CERTIFICATE_PASSWORD,
             string? jwkCertificateFilename = BaseTest.JWT_CERTIFICATE_FILENAME,
             string? jwkCertificatePassword = BaseTest.JWT_CERTIFICATE_PASSWORD)
         {
+            redirectUri = BaseTest.SubstituteConstant(redirectUri);   
+
+            if (clientId == BaseTest.SOFTWAREPRODUCT_ID) 
+            {
+                clientId = BaseTest.GetClientId(BaseTest.SOFTWAREPRODUCT_ID);
+            }
+
             redirectUri = BaseTest.SubstituteConstant(redirectUri);
 
-            var responseMessage = await SendRequest(
-                authCode, 
-                shareDuration: shareDuration,
+            var responseMessage = await SendRequest(authCode, shareDuration: shareDuration,
                 clientId: clientId,
                 redirectUri: redirectUri,
-                codeVerifier: codeVerifier,
                 certificateFilename: certificateFilename,
                 certificatePassword: certificatePassword,
                 jwkCertificateFilename: jwkCertificateFilename,
@@ -208,7 +205,7 @@ namespace CDR.DataHolder.IntegrationTests.Infrastructure.API2
 
             if (responseMessage.StatusCode != HttpStatusCode.OK)
             {
-                throw new Exception($"{nameof(GetResponse)} - Error getting response");
+                throw new Exception($"{nameof(GetResponse)} - Error getting response - {responseMessage.StatusCode} - {await responseMessage.Content.ReadAsStringAsync()}");
             }
 
             var response = await DeserializeResponse(responseMessage);

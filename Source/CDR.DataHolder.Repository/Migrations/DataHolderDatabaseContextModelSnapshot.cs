@@ -17,7 +17,7 @@ namespace CDR.DataHolder.Repository.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "6.0.1")
+                .HasAnnotation("ProductVersion", "6.0.9")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder, 1L, 1);
@@ -133,36 +133,6 @@ namespace CDR.DataHolder.Repository.Migrations
                     b.ToTable("AccountPlan", (string)null);
                 });
 
-            modelBuilder.Entity("CDR.DataHolder.Repository.Entities.Brand", b =>
-                {
-                    b.Property<Guid>("BrandId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("BrandName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<Guid>("LegalEntityId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("LogoUri")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(25)
-                        .HasColumnType("nvarchar(25)");
-
-                    b.HasKey("BrandId");
-
-                    b.HasIndex("LegalEntityId");
-
-                    b.ToTable("Brand", (string)null);
-                });
-
             modelBuilder.Entity("CDR.DataHolder.Repository.Entities.Customer", b =>
                 {
                     b.Property<Guid>("CustomerId")
@@ -194,31 +164,6 @@ namespace CDR.DataHolder.Repository.Migrations
                         .HasFilter("[PersonId] IS NOT NULL");
 
                     b.ToTable("Customer", (string)null);
-                });
-
-            modelBuilder.Entity("CDR.DataHolder.Repository.Entities.LegalEntity", b =>
-                {
-                    b.Property<Guid>("LegalEntityId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("LegalEntityName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("LogoUri")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(25)
-                        .HasColumnType("nvarchar(25)");
-
-                    b.HasKey("LegalEntityId");
-
-                    b.ToTable("LegalEntity", (string)null);
                 });
 
             modelBuilder.Entity("CDR.DataHolder.Repository.Entities.LogEventsDrService", b =>
@@ -559,40 +504,6 @@ namespace CDR.DataHolder.Repository.Migrations
                     b.ToTable("ServicePoint", (string)null);
                 });
 
-            modelBuilder.Entity("CDR.DataHolder.Repository.Entities.SoftwareProduct", b =>
-                {
-                    b.Property<Guid>("SoftwareProductId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("BrandId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("LogoUri")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<string>("SoftwareProductDescription")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<string>("SoftwareProductName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(25)
-                        .HasColumnType("nvarchar(25)");
-
-                    b.HasKey("SoftwareProductId");
-
-                    b.HasIndex("BrandId");
-
-                    b.ToTable("SoftwareProduct", (string)null);
-                });
-
             modelBuilder.Entity("CDR.DataHolder.Repository.Entities.Transaction", b =>
                 {
                     b.Property<string>("TransactionId")
@@ -706,17 +617,6 @@ namespace CDR.DataHolder.Repository.Migrations
                     b.Navigation("Plan");
                 });
 
-            modelBuilder.Entity("CDR.DataHolder.Repository.Entities.Brand", b =>
-                {
-                    b.HasOne("CDR.DataHolder.Repository.Entities.LegalEntity", "LegalEntity")
-                        .WithMany("Brands")
-                        .HasForeignKey("LegalEntityId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("LegalEntity");
-                });
-
             modelBuilder.Entity("CDR.DataHolder.Repository.Entities.Customer", b =>
                 {
                     b.HasOne("CDR.DataHolder.Repository.Entities.Organisation", "Organisation")
@@ -755,17 +655,6 @@ namespace CDR.DataHolder.Repository.Migrations
                     b.Navigation("AccountPlan");
                 });
 
-            modelBuilder.Entity("CDR.DataHolder.Repository.Entities.SoftwareProduct", b =>
-                {
-                    b.HasOne("CDR.DataHolder.Repository.Entities.Brand", "Brand")
-                        .WithMany("SoftwareProducts")
-                        .HasForeignKey("BrandId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Brand");
-                });
-
             modelBuilder.Entity("CDR.DataHolder.Repository.Entities.Transaction", b =>
                 {
                     b.HasOne("CDR.DataHolder.Repository.Entities.Account", "Account")
@@ -789,19 +678,9 @@ namespace CDR.DataHolder.Repository.Migrations
                     b.Navigation("ServicePoints");
                 });
 
-            modelBuilder.Entity("CDR.DataHolder.Repository.Entities.Brand", b =>
-                {
-                    b.Navigation("SoftwareProducts");
-                });
-
             modelBuilder.Entity("CDR.DataHolder.Repository.Entities.Customer", b =>
                 {
                     b.Navigation("Accounts");
-                });
-
-            modelBuilder.Entity("CDR.DataHolder.Repository.Entities.LegalEntity", b =>
-                {
-                    b.Navigation("Brands");
                 });
 
             modelBuilder.Entity("CDR.DataHolder.Repository.Entities.Organisation", b =>

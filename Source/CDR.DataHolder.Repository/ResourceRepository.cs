@@ -48,8 +48,26 @@ namespace CDR.DataHolder.Repository
 		public async Task<Customer> GetCustomerByLoginId(string loginId)
 		{
 			var customer = await _dataHolderDatabaseContext.Customers.AsNoTracking()
-				.FirstOrDefaultAsync(customer => customer.LoginId == loginId);
-			return _mapper.Map<Customer>(customer);
+                .Include(p => p.Person)
+                .Include(o => o.Organisation)
+                .FirstOrDefaultAsync(customer => customer.LoginId == loginId);
+
+            if (customer == null)
+            {
+                return null;
+            }
+
+            switch (customer.CustomerUType.ToLower())
+            {
+                case "organisation":
+                    return _mapper.Map<Organisation>(customer);
+
+                case "person":
+                    return _mapper.Map<Person>(customer);
+
+                default:
+                    return null;
+            }            
 		}
 
 		public async Task<Page<EnergyAccount[]>> GetAllEnergyAccounts(EnergyAccountFilter filter, int page, int pageSize)
@@ -74,8 +92,7 @@ namespace CDR.DataHolder.Repository
 				.Include(account => account.AccountPlans)
 					.ThenInclude(accountPlan => accountPlan.ServicePoints)
 				.Where(account =>
-					filter.AllowedAccountIds.Contains(account.AccountId)	
-					&& account.Customer.CustomerId == filter.CustomerId);
+					filter.AllowedAccountIds.Contains(account.AccountId));
 
 			// Apply ordering and pagination
 			var totalRecords = await accountsQuery.CountAsync();
@@ -94,12 +111,11 @@ namespace CDR.DataHolder.Repository
 		/// <summary>
 		/// Check that the customer can access the given accounts.
 		/// </summary>
-		/// <param name="accountId">Account ID</param>
-		/// <param name="customerId">Customer ID</param>
+		/// <param name="accountId">Account ID</param>		
 		/// <returns>True if the customer can access the account, otherwise false.</returns>
-		public async Task<bool> CanAccessAccount(string accountId, Guid customerId)
+		public async Task<bool> CanAccessAccount(string accountId)
 		{
-			return await _dataHolderDatabaseContext.Accounts.AnyAsync(a => a.AccountId == accountId && a.CustomerId == customerId);
+			return await _dataHolderDatabaseContext.Accounts.AnyAsync(a => a.AccountId == accountId);
 		}
 
 		/// <summary>
@@ -110,7 +126,7 @@ namespace CDR.DataHolder.Repository
 		public async Task<EnergyAccountConcession[]> GetEnergyAccountConcessions(AccountConsessionsFilter filter)
 		{
 			IQueryable<Entities.AccountConcession> accountTransactionsQuery = _dataHolderDatabaseContext.AccountConcessions.AsNoTracking()
-				.Where(accountConcession => accountConcession.AccountId == filter.AccountId && accountConcession.Account.CustomerId == filter.CustomerId);
+				.Where(accountConcession => accountConcession.AccountId == filter.AccountId);
 			var concessions = await accountTransactionsQuery.ToListAsync();
             
 			return _mapper.Map<EnergyAccountConcession[]>(concessions);

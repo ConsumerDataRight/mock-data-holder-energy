@@ -51,16 +51,6 @@ namespace CDR.DataHolder.Repository.Infrastructure
 				.IncludeMembers(source => source.Organisation)
 				.ReverseMap();
 
-			CreateMap<Brand, DomainEntities.Brand>()
-				.ForMember(dest => dest.LegalEntity, source => source.MapFrom(source => source.LegalEntity))
-				.ReverseMap();
-
-			CreateMap<LegalEntity, DomainEntities.LegalEntity>()
-				.ReverseMap();
-
-			CreateMap<SoftwareProduct, DomainEntities.SoftwareProduct>()
-				.ForMember(dest => dest.Brand, source => source.MapFrom(source => source.Brand))
-				.ReverseMap();
 		}
 	}
 }
