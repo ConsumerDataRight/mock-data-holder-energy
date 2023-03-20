@@ -43,6 +43,27 @@ jobs:
       uses: actions/checkout@v2
       with:
         path: ./mock-data-holder-energy
+    
+    - name: Checkout Authorisation Server (main)
+      if: ${{ github.ref == 'refs/heads/main' }}
+      uses: actions/checkout@v2
+      with:
+        repository: authorisation-server
+        ref: github.ref
+        path: ./cdr-auth-server
+
+    - name: Checkout Authorisation Server (develop)
+      if: ${{ github.ref != 'refs/heads/main' }}
+      uses: actions/checkout@v2
+      with:
+        repository: authorisation-server
+        ref: 'refs/heads/develop'
+        path: ./cdr-auth-server
+
+    #copy the authorisation-server code into dataholder
+    - name: Copy cdr-auth-server folder into mock-data-holder-energy
+      run: |
+        cp -r ${{ github.workspace }}/cdr-auth-server ${{ github.workspace }}/mock-data-holder-energy/Source/cdr-auth-server
 
     - name: Pull Mock Register Image (main)
       if: ${{ github.ref == 'refs/heads/main' }}
