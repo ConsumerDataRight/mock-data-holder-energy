@@ -20,7 +20,6 @@ namespace CDR.DataHolder.IntegrationTests.Infrastructure.API2
 #pragma warning disable IDE1006
             public string? alg { get; set; }
             public string? e { get; set; }
-            // public string[]? key_ops { get; set; }
             public string? kid { get; set; }
             public string? kty { get; set; }
             public string? n { get; set; }
@@ -48,7 +47,6 @@ namespace CDR.DataHolder.IntegrationTests.Infrastructure.API2
             {
                 alg = signingCredentials.Algorithm,
                 kid = signingCredentials.Kid, 
-                //  kid = signingCredentials.Key.KeyId,
                 kty = securityKey.PublicKey.KeyExchangeAlgorithm,
                 n = n,
                 e = e,

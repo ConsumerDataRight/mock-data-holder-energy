@@ -9,7 +9,7 @@ namespace CDR.DataHolder.Domain.Repositories
 	{
 		Task<Customer> GetCustomer(Guid customerId);
 		Task<Customer> GetCustomerByLoginId(string loginId);
-		Task<bool> CanAccessAccount(string accountId, Guid customerId);
+		Task<bool> CanAccessAccount(string accountId);
 		Task<Page<EnergyAccount[]>> GetAllEnergyAccounts(EnergyAccountFilter filter, int page, int pageSize);
 		Task<EnergyAccount[]> GetAllAccountsByCustomerIdForConsent(Guid customerId);
 		Task<EnergyAccountConcession[]> GetEnergyAccountConcessions(AccountConsessionsFilter filter);

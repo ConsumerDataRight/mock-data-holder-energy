@@ -52,7 +52,11 @@ namespace CDR.DataHolder.IntegrationTests
 
         public string ClientAssertionType { get; set; } = BaseTest.CLIENTASSERTIONTYPE;
 
-        public string ClientRedirectURI { get; set; } = BaseTest.SubstituteConstant(BaseTest.SOFTWAREPRODUCT_REDIRECT_URI_FOR_INTEGRATION_TESTS);
+        private string _clientRedirectUri = BaseTest.SOFTWAREPRODUCT_REDIRECT_URI_FOR_INTEGRATION_TESTS;
+        public string ClientRedirectURI { 
+            get => BaseTest.SubstituteConstant(_clientRedirectUri); 
+            set => _clientRedirectUri = value; 
+        }
 
         public string Scope { get; set; } = BaseTest.SCOPE_REGISTRATION;
 

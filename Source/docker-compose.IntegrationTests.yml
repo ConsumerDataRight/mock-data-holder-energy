@@ -5,46 +5,62 @@ version: '3.8'
 services:
   mock-register:
     container_name: mock-register
-    image: mock-register    
+    image: mock-register
     hostname: mock-register
     ports: 
       - "7000:7000"
       - "7001:7001"
       - "7006:7006"
+    # NOTE - comment out extra hosts (only used for debugging tests) or find some way to configure at runtime      
+    extra_hosts:
+      - "mock-data-holder-energy-integration-tests:host-gateway"
+      - "cdr-auth-server-integration-tests:host-gateway"
     environment:
       - ASPNETCORE_ENVIRONMENT=Release
-    volumes:
-      - "./_temp/mock-register/tmp:/tmp"      
+    # NOTE - commented out volumes below as volume is mounted as 1001:121 (vsts:docker) in build pipeline and causes issue with chown in dockerfile (appuser:appgroup), ie stops container from starting because of different user
+    # volumes:
+    #   - "./_temp/mock-register/tmp:/tmp"      
     healthcheck:
-      test: test -f /app/admin/_healthcheck_ready || exit 1
+      test: wget --no-check-certificate --no-verbose --spider https://localhost:7006/health || exit 1
       timeout: 5s
       interval: 5s
-      retries: 20
+      retries: 50      
     depends_on:
       mssql:
         condition: service_healthy
 
   mock-data-holder-energy:
-    container_name: mock-data-holder-energy-for-testing
-    image: mock-data-holder-energy-for-testing
+    container_name: mock-data-holder-energy
+    image: mock-data-holder-energy
     hostname: mock-data-holder-energy
     ports: 
       - "8100:8100"
       - "8101:8101"
       - "8102:8102"
       - "8105:8105"
+      # auth ui
+      - "3100:3100"
+    # NOTE - comment out extra hosts (only used for debugging tests) or find some way to configure at runtime            
+    extra_hosts:
+      - "mock-data-holder-energy-integration-tests:host-gateway"
+      - "cdr-auth-server-integration-tests:host-gateway"
     build:
       context: .
-      dockerfile: Dockerfile.for-testing
+      dockerfile: Dockerfile
     environment:
       - ASPNETCORE_ENVIRONMENT=Release
-    volumes:
-      - "./_temp/mock-data-holder-energy/tmp:/tmp"      
+      # tests need expiry of 3600
+      - CdrAuthServer__AccessTokenExpirySeconds=3600
+      - CdrAuthServer__SupportJarmEncryption=false
+    # NOTE - commented out volumes below as volume is mounted as 1001:121 (vsts:docker) in build pipeline and causes issue with chown in dockerfile (appuser:appgroup), ie stops container from starting because of different user
+    # volumes:
+    #   - "./_temp/mock-data-holder-energy/tmp:/tmp"      
     healthcheck:
-      test: test -f /app/manage/_healthcheck_ready || exit 1
+      # NOTE - MDH healthcheck (8105) should be updated to consider embedded CdrAuthServer health (8101). Meanwhile, just check both 8105, 8101 and 3100 (ui)
+      test: ((wget --no-check-certificate --no-verbose --spider https://localhost:8105/health) && (wget --no-check-certificate --no-verbose --spider https://localhost:8101/health) && (wget --no-check-certificate --no-verbose --spider https://localhost:3100)) || exit 1
       timeout: 5s
       interval: 5s
-      retries: 20    
+      retries: 50 
     depends_on:
       mssql:
         condition: service_healthy
@@ -53,7 +69,7 @@ services:
 
   mock-data-holder-energy-integration-tests:
     container_name: mock-data-holder-energy-integration-tests
-    image: mock-data-holder-energy-integration-tests-energy
+    image: mock-data-holder-energy-integration-tests
     hostname: mock-data-holder-energy-integration-tests
     ports: 
       - "9999:9999"
@@ -66,7 +82,6 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Release
     volumes:
-      - "./_temp/mock-data-holder-energy-integration-tests/tmp:/tmp"   
       - "./_temp/mock-data-holder-energy-integration-tests/testresults:/testresults"
     depends_on:
       mssql:
@@ -81,12 +96,11 @@ services:
     image: 'mcr.microsoft.com/mssql/server:2019-latest'
     ports: 
       - "1433:1433"
-      - "9933:1433"
     environment:
       - ACCEPT_EULA=Y
       - SA_PASSWORD=Pa{}w0rd2019
     healthcheck:
       test: /opt/mssql-tools/bin/sqlcmd -S . -U sa -P "Pa{}w0rd2019" -Q "SELECT 1" || exit 1 
-      timeout: 10s
-      interval: 10s
-      retries: 10    
+      timeout: 5s
+      interval: 5s
+      retries: 20    

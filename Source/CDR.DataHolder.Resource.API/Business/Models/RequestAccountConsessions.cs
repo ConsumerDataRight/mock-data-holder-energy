@@ -11,8 +11,6 @@ namespace CDR.DataHolder.Resource.API.Business.Models
         [FromRoute(Name = "accountId")]
         public string AccountId { get; set; }
 
-        public Guid CustomerId { get; set; }
-
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
             var results = new List<ValidationResult>();

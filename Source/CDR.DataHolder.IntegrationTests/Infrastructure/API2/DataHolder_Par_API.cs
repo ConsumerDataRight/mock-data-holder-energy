@@ -25,7 +25,7 @@ namespace CDR.DataHolder.IntegrationTests.Infrastructure.API2
              string? clientId = BaseTest.SOFTWAREPRODUCT_ID,
              string? clientAssertionType = BaseTest.CLIENTASSERTIONTYPE,
              string? scope = BaseTest.SCOPE,
-             int? sharingDuration = 7776000,
+             int? sharingDuration = BaseTest.SHARING_DURATION,
              string? aud = null,
              int nbfOffsetSeconds = 0,
              int expOffsetSeconds = 0,
@@ -35,7 +35,10 @@ namespace CDR.DataHolder.IntegrationTests.Infrastructure.API2
              string? cdrArrangementId = null,
              string? redirectUri = BaseTest.SOFTWAREPRODUCT_REDIRECT_URI_FOR_INTEGRATION_TESTS,
              string? clientAssertion = null,
-             string? codeVerifier = null,
+
+             string? codeVerifier = BaseTest.FAPI_PHASE2_CODEVERIFIER,
+             string? codeChallengeMethod = BaseTest.FAPI_PHASE2_CODECHALLENGEMETHOD,
+
              string? requestUri = null,
              string? responseMode = "fragment",
              string? certificateFilename = BaseTest.CERTIFICATE_FILENAME,
@@ -45,18 +48,22 @@ namespace CDR.DataHolder.IntegrationTests.Infrastructure.API2
              string? jwtCertificateForRequestObjectFilename = BaseTest.JWT_CERTIFICATE_FILENAME,
              string? jwtCertificateForRequestObjectPassword = BaseTest.JWT_CERTIFICATE_PASSWORD)
         {
-            var issuer = BaseTest.DH_TLS_IDENTITYSERVER_BASE_URL;
-            var parUrl = $"{BaseTest.DH_TLS_IDENTITYSERVER_BASE_URL}/connect/par";
+            redirectUri = BaseTest.SubstituteConstant(redirectUri);
+
+            if (clientId == BaseTest.SOFTWAREPRODUCT_ID) 
+            {
+                clientId = BaseTest.GetClientId(BaseTest.SOFTWAREPRODUCT_ID);
+            }
+
+            var issuer = BaseTest.DH_TLS_AUTHSERVER_BASE_URL;
+
+            var parUrl = $"{BaseTest.CDRAUTHSERVER_SECUREBASEURI}/connect/par";
+
             var formFields = new List<KeyValuePair<string?, string?>>();
 
             if (clientAssertionType != null)
             {
                 formFields.Add(new KeyValuePair<string?, string?>("client_assertion_type", clientAssertionType));
-            }
-
-            if (codeVerifier == null)
-            {
-                codeVerifier = string.Concat(System.Guid.NewGuid().ToString(), '-', System.Guid.NewGuid().ToString());
             }
 
             if (requestUri != null)
@@ -69,7 +76,7 @@ namespace CDR.DataHolder.IntegrationTests.Infrastructure.API2
                 {
                     CertificateFilename = jwtCertificateForClientAssertionFilename,
                     CertificatePassword = jwtCertificateForClientAssertionPassword,
-                    Issuer = clientId,
+                    Issuer = clientId ?? throw new NullReferenceException(nameof(clientId)),
                     Audience = aud ?? issuer
                 }.Generate()
             ));
@@ -79,7 +86,7 @@ namespace CDR.DataHolder.IntegrationTests.Infrastructure.API2
                 var iat = new DateTimeOffset(DateTime.Now).ToUnixTimeSeconds();
                 var request = new RequestObject()
                 {
-                    Aud = aud ?? BaseTest.DH_TLS_IDENTITYSERVER_BASE_URL,
+                    Aud = aud ?? BaseTest.DH_TLS_AUTHSERVER_BASE_URL,
                     IssuedAt = iat,
                     NotBefore = addNotBeforeClaim ? iat + nbfOffsetSeconds : null,
                     Expiry = addExpiryClaim ? iat + expOffsetSeconds + 600 : null,
@@ -91,8 +98,10 @@ namespace CDR.DataHolder.IntegrationTests.Infrastructure.API2
                     ResponseMode = responseMode,
                     JwtCertificateFilename = jwtCertificateForRequestObjectFilename,
                     JwtCertificatePassword = jwtCertificateForRequestObjectPassword,
-                    CodeChallenge = codeVerifier.CreatePkceChallenge(),
-                    CodeChallengeMethod = "S256"
+
+
+                    CodeChallenge = codeVerifier?.CreatePkceChallenge(), 
+                    CodeChallengeMethod = codeChallengeMethod 
                 };
 
                 formFields.Add(new KeyValuePair<string?, string?>("request", request.Get()));
@@ -108,6 +117,8 @@ namespace CDR.DataHolder.IntegrationTests.Infrastructure.API2
                 X509KeyStorageFlags.Exportable));
 
             using var client = new HttpClient(clientHandler);
+
+            BaseTest.AttachHeadersForStandAlone(parUrl, content.Headers);
 
             var responseMessage = await client.PostAsync(parUrl, content);
 

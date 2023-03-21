@@ -11,7 +11,6 @@ using System.Configuration;
 using System.IdentityModel.Tokens.Jwt;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reflection;
@@ -19,6 +18,8 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Xunit;
 using Xunit.Sdk;
+using Dapper;
+using System.Net;
 
 #nullable enable
 
@@ -75,8 +76,110 @@ namespace CDR.DataHolder.IntegrationTests
     [Collection("IntegrationTests")]
     [TestCaseOrderer("CDR.DataHolder.IntegrationTests.XUnit.Orderers.AlphabeticalOrderer", "CDR.DataHolder.IntegrationTests")]
     [DisplayTestMethodName]
-    abstract public class BaseTest
+    abstract public class BaseTest : IClassFixture<PlaywrightFixture>
     {
+        // static public bool RUNNING_IN_CONTAINER => Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER")?.ToUpper() == "TRUE";
+
+        #region MJS_FOR_CDRAUTHSERVER
+        /// <summary>
+        /// Get DCR ClientId for a SoftwareProductID
+        /// </summary>
+        static public string GetClientId(string softwareProductId)
+        {
+            using var connection = new SqlConnection(BaseTest.AUTHSERVER_CONNECTIONSTRING);
+
+            var clientId = connection.QuerySingle<string>(
+                "select clientid from clientclaims where Upper(type)=@ClaimType and upper(value)=@ClaimValue",
+                new
+                {
+                    ClaimType = "SOFTWARE_ID",
+                    ClaimValue = softwareProductId.ToUpper()
+                });
+
+            if (string.IsNullOrEmpty(clientId))
+            {
+                throw new NullReferenceException($"{nameof(GetClientId)} - ClientId not found for SoftwareProductId {softwareProductId}");
+            }
+
+            return clientId;
+        }
+
+        public const int DAYS_90 = 7776000; // 90 days
+        public const int SHARING_DURATION = DAYS_90;
+
+        // Running standalone CdrAuthServer?
+        static public bool STANDALONE => Configuration["Standalone"]?.ToUpper() == "TRUE";
+        // static public bool STANDALONE => false;  // authserver is using MDH gateway (ie not standalone)
+
+        // X-TlsClientCertThumbprint header to add if running standalone
+        static public string XTLSCLIENTCERTTHUMBPRINT => Configuration["XTlsClientCertThumbprint"]
+            ?? throw new Exception($"{nameof(XTLSCLIENTCERTTHUMBPRINT)} - configuration setting not found");
+
+        // X-TlsClientCertThumbprint (for additional certificate) header to add if running standalone            
+        static public string XTLSADDITIONALCLIENTCERTTHUMBPRINT => Configuration["XTlsAdditionalClientCertThumbprint"]
+            ?? throw new Exception($"{nameof(XTLSADDITIONALCLIENTCERTTHUMBPRINT)} - configuration setting not found");
+
+        // When running standalone CdrAuthServer (ie no MtlsGateway) we need to attach the X-TlsClientCertThumbprint required by ValidateMTLSAttribute
+        static public void AttachHeadersForStandAlone(string url, HttpHeaders headers, string? XTlsClientCertThumbprint = null)
+        {
+            if (STANDALONE)
+            {
+                // if (url.StartsWith(BaseTest.DH_MTLS_GATEWAY_URL) == true)
+                if (url.StartsWith(BaseTest.CDRAUTHSERVER_SECUREBASEURI) == true)
+                {
+                    headers.Add("X-TlsClientCertThumbprint", XTlsClientCertThumbprint ?? XTLSCLIENTCERTTHUMBPRINT);
+                }
+            }
+        }
+
+        public const string FAPI_PHASE2_CODEVERIFIER = "foo-bar";
+        public const string FAPI_PHASE2_CODECHALLENGEMETHOD = "S256";
+
+        static public async Task<string> PAR_GetRequestUri(
+                   string? scope = SCOPE,
+                   string? clientId = SOFTWAREPRODUCT_ID,
+                   string? jwtCertificateForClientAssertionFilename = BaseTest.JWT_CERTIFICATE_FILENAME,
+                   string? jwtCertificateForClientAssertionPassword = BaseTest.JWT_CERTIFICATE_PASSWORD,
+                   string? jwtCertificateForRequestObjectFilename = BaseTest.JWT_CERTIFICATE_FILENAME,
+                   string? jwtCertificateForRequestObjectPassword = BaseTest.JWT_CERTIFICATE_PASSWORD,
+                   string? redirectUri = BaseTest.SOFTWAREPRODUCT_REDIRECT_URI_FOR_INTEGRATION_TESTS,
+                   int? sharingDuration = null,
+                   string? cdrArrangementId = null,
+                   string? responseMode = "fragment")
+        {
+            var response = await DataHolder_Par_API.SendRequest(
+                scope: scope,
+                clientId: clientId,
+                jwtCertificateForClientAssertionFilename: jwtCertificateForClientAssertionFilename,
+                jwtCertificateForClientAssertionPassword: jwtCertificateForClientAssertionPassword,
+                jwtCertificateForRequestObjectFilename: jwtCertificateForRequestObjectFilename,
+                jwtCertificateForRequestObjectPassword: jwtCertificateForRequestObjectPassword,
+                redirectUri: redirectUri,
+                sharingDuration: sharingDuration,
+                cdrArrangementId: cdrArrangementId,
+                responseMode: responseMode);
+
+            if (response.StatusCode != HttpStatusCode.OK && response.StatusCode != HttpStatusCode.Created)
+            {
+                throw new Exception($"Statuscode={response.StatusCode} - Response.Content={await response.Content.ReadAsStringAsync()}");
+            }
+
+            var json = await DataHolder_Par_API.DeserializeResponse(response);
+
+            var requestUri = json?.RequestURI ?? throw new NullReferenceException("requestUri");
+
+            return requestUri;
+        }
+
+        static public string CDRAUTHSERVER_BASEURI => Configuration["URL:CDRAuthServer_BaseUri"]
+            ?? throw new Exception($"{nameof(CDRAUTHSERVER_BASEURI)} - configuration setting not found");
+        static public string CDRAUTHSERVER_SECUREBASEURI => Configuration["URL:CDRAuthServer_SecureBaseUri"]
+            ?? throw new Exception($"{nameof(CDRAUTHSERVER_SECUREBASEURI)} - configuration setting not found");
+
+        public const string SCOPE_TOKEN_ACCOUNTS = "openid bank:accounts.basic:read";
+
+        #endregion // MJS_FOR_CDRAUTHSERVER
+
         public static int TOKEN_EXPIRY_SECONDS => Int32.Parse(Configuration["AccessTokenLifetimeSeconds"]);
 
         // VSCode slows on excessively long lines, splitting string constant into smaller lines.
@@ -120,6 +223,7 @@ namespace CDR.DataHolder.IntegrationTests
             @"tUQhX0-IqUzdVsdTf2t9DNva2VRkK9Cdf2kCtqs17NGDlWceQ7IKR-U6qn9izNOYeM47Qhqa6MiROtrfe5Ja3p8vjnN72eEQ_XPd2bMVxkbyh0IrG9-5JCOolbjjnbZaxh4dIggfdY52JS" +
             @"2-DLYhQnMnJtrVkKe1J212x8SVf7FKcNGY0OM4MLG3Gcl5S8EzQQuh464Nr-rPnec7SbrqjQ2xyn56s4Nhv5PfQ-VOqPQXOkyBPzH";
 
+
         // VSCode slows on excessively long lines, splitting string constant into smaller lines.
         public const string EXPIRED_CONSUMER_ACCESS_TOKEN =
             @"eyJhbGciOiJQUzI1NiIsImtpZCI6IjdDNTcxNjU1M0U5QjEzMkVGMzI1QzQ5Q0EyMDc5NzM3MTk2QzAzREIiLCJ4NXQiOiJmRmNXVlQ2YkV5N3pKY1Njb2dlWE54bHNBOXMiLCJ0eXAiOiJhdCtqd3QifQ.eyJuYmYiOjE2NTI0Mjc2MTYsImV4cCI6MTY1MjQzMTIxNiwiaXNzIjoiaHR0cHM6Ly9tb2NrLWRh"+
@@ -155,16 +259,17 @@ namespace CDR.DataHolder.IntegrationTests
 
         protected const string INVALID_CERTIFICATE_FILENAME = "Certificates/client-invalid.pfx";
         protected const string INVALID_CERTIFICATE_PASSWORD = "#M0ckDataRecipient#";
+
         public const string DATAHOLDER_CERTIFICATE_FILENAME = "Certificates/mock-data-holder.pfx";
         public const string DATAHOLDER_CERTIFICATE_PASSWORD = "#M0ckDataHolder#";
 
         public static string DH_MTLS_GATEWAY_URL => Configuration["URL:DH_MTLS_Gateway"]
             ?? throw new ConfigurationErrorsException($"{nameof(DH_MTLS_GATEWAY_URL)} - configuration setting not found");
 
-        public static string DH_MTLS_IDENTITYSERVER_TOKEN_URL => DH_MTLS_GATEWAY_URL + "/idp/connect/token"; // DH IdentityServer Token API
+        public static string DH_MTLS_AUTHSERVER_TOKEN_URL => DH_MTLS_GATEWAY_URL + "/idp/connect/token"; // DH AUTHSERVER Token API
 
-        public static string DH_TLS_IDENTITYSERVER_BASE_URL => Configuration["URL:DH_TLS_IdentityServer"]
-            ?? throw new ConfigurationErrorsException($"{nameof(DH_TLS_IDENTITYSERVER_BASE_URL)} - configuration setting not found");
+        public static string DH_TLS_AUTHSERVER_BASE_URL => Configuration["URL:DH_TLS_AuthServer"]
+            ?? throw new ConfigurationErrorsException($"{nameof(DH_TLS_AUTHSERVER_BASE_URL)} - configuration setting not found");
 
         public static string DH_TLS_PUBLIC_BASE_URL => Configuration["URL:DH_TLS_Public"]
             ?? throw new ConfigurationErrorsException($"{nameof(DH_TLS_PUBLIC_BASE_URL)} - configuration setting not found");
@@ -174,7 +279,7 @@ namespace CDR.DataHolder.IntegrationTests
 
         public static string REGISTER_MTLS_TOKEN_URL => REGISTER_MTLS_URL + "/idp/connect/token"; // Register Token API
 
-        public static string REGISTRATION_AUDIENCE_URI => DH_TLS_IDENTITYSERVER_BASE_URL;
+        public static string REGISTRATION_AUDIENCE_URI => DH_TLS_AUTHSERVER_BASE_URL;   
 
         public const string ID_TYPE_ACCOUNT = "ACCOUNT_ID";
         public const string ID_TYPE_TRANSACTION = "TRANSACTION_ID";
@@ -182,8 +287,8 @@ namespace CDR.DataHolder.IntegrationTests
         // Connection strings
         static public string DATAHOLDER_CONNECTIONSTRING => Configuration["ConnectionStrings:DataHolder"]
             ?? throw new ConfigurationErrorsException($"{nameof(DATAHOLDER_CONNECTIONSTRING)} - configuration setting not found");
-        static public string IDENTITYSERVER_CONNECTIONSTRING => Configuration["ConnectionStrings:IdentityServer"]
-            ?? throw new ConfigurationErrorsException($"{nameof(IDENTITYSERVER_CONNECTIONSTRING)} - configuration setting not found");
+        static public string AUTHSERVER_CONNECTIONSTRING => Configuration["ConnectionStrings:AuthServer"]
+            ?? throw new ConfigurationErrorsException($"{nameof(AUTHSERVER_CONNECTIONSTRING)} - configuration setting not found");
         static public string REGISTER_CONNECTIONSTRING => Configuration["ConnectionStrings:Register"]
             ?? throw new ConfigurationErrorsException($"{nameof(REGISTER_CONNECTIONSTRING)} - configuration setting not found");
 
@@ -225,11 +330,13 @@ namespace CDR.DataHolder.IntegrationTests
             ?? throw new ConfigurationErrorsException($"{nameof(MDH_HOST)} - configuration setting not found");
 
         public const string SOFTWAREPRODUCT_REDIRECT_URI_FOR_INTEGRATION_TESTS = "<MDH_INTEGRATION_TESTS_HOST>:9999/consent/callback";
+        //static public string SOFTWAREPRODUCT_REDIRECT_URI_FOR_INTEGRATION_TESTS => SubstituteConstantToken(CONSTANT_SOFTWAREPRODUCT_REDIRECT_URI_FOR_INTEGRATION_TESTS);
 
         public const string SOFTWAREPRODUCT_JWKS_URI_FOR_INTEGRATION_TESTS = "<MDH_INTEGRATION_TESTS_HOST>:9998/jwks";
+        //static public string SOFTWAREPRODUCT_JWKS_URI_FOR_INTEGRATION_TESTS => SubstituteConstantToken(CONSTANT_SOFTWAREPRODUCT_JWKS_URI_FOR_INTEGRATION_TESTS);
 
         // Constants are needed for attributes on test facts/theories and for method parameter defaults, 
-        // but we need to dynamic values that vary at runtime based on the appsettings.json in use,
+        // but we need dynamic values that vary at runtime based on the appsettings.json in use,
         // Hence this method turns the constant value into a dynamic value by replacing "tokens" in the constant.
         public static string SubstituteConstant(string? c)
         {
@@ -248,8 +355,10 @@ namespace CDR.DataHolder.IntegrationTests
         public const string ADDITIONAL_SOFTWAREPRODUCT_ID = "9381DAD2-6B68-4879-B496-C1319D7DFBC9";
 
         public static string ADDITIONAL_SOFTWAREPRODUCT_REDIRECT_URI_FOR_INTEGRATION_TESTS => $"{MDH_INTEGRATION_TESTS_HOST}:9997/consent/callback";
+
         public static string ADDITIONAL_SOFTWAREPRODUCT_JWKS_URI_FOR_INTEGRATION_TESTS => $"{MDH_INTEGRATION_TESTS_HOST}:9996/jwks";
-        public const string ADDITIONAL_JWKS_CERTIFICATE_FILENAME = ADDITIONAL_CERTIFICATE_FILENAME;  // FIXME - generate new certificate just for jwks
+
+        public const string ADDITIONAL_JWKS_CERTIFICATE_FILENAME = ADDITIONAL_CERTIFICATE_FILENAME;
         public const string ADDITIONAL_JWKS_CERTIFICATE_PASSWORD = ADDITIONAL_CERTIFICATE_PASSWORD;
 
         // Scope
@@ -270,6 +379,12 @@ namespace CDR.DataHolder.IntegrationTests
         /// <param name="content">The response content</param>
         public static async Task Assert_HasContent_Json(string? expectedJson, HttpContent? content)
         {
+            content.Should().NotBeNull(expectedJson ?? "");
+            if (content == null)
+            {
+                return;
+            }
+
             var actualJson = await content.ReadAsStringAsync();
             Assert_Json(expectedJson, actualJson);
         }
@@ -306,18 +421,40 @@ namespace CDR.DataHolder.IntegrationTests
         /// </summary>
         /// <param name="expectedJson">The expected json</param>
         /// <param name="actualJson">The actual json</param>
-        public static void Assert_Json(string expectedJson, string actualJson)
+        public static void Assert_Json(string? expectedJson, string actualJson)
         {
-            // Remove formatting from expectedJson
-            var expectedObject = JsonConvert.DeserializeObject<object>(expectedJson);
-            expectedJson = JsonConvert.SerializeObject(expectedObject, new JsonSerializerSettings { Formatting = Formatting.None });
+            static object? Deserialize(string name, string json)
+            {
+                try
+                {
+                    return JsonConvert.DeserializeObject<object>(json);
+                }
+                catch
+                {
+                    return null;
+                }
+            }
 
-            // Remove formatting from actualJson
-            var actualObject = JsonConvert.DeserializeObject<object>(actualJson);
-            actualJson = JsonConvert.SerializeObject(actualObject, new JsonSerializerSettings { Formatting = Formatting.None });
+            expectedJson.Should().NotBeNullOrEmpty();
+            actualJson.Should().NotBeNullOrEmpty(expectedJson == null ? "" : $"expected {expectedJson}");
 
-            // Compare
-            actualJson.Should().Be(expectedJson);
+            if (string.IsNullOrEmpty(expectedJson) || string.IsNullOrEmpty(actualJson))
+            {
+                return;
+            }
+
+            object? expectedObject = Deserialize(nameof(expectedJson), expectedJson);
+            expectedObject.Should().NotBeNull($"Error deserializing expected json - '{expectedJson}'");
+
+            object? actualObject = Deserialize(nameof(actualJson), actualJson);
+            actualObject.Should().NotBeNull($"Error deserializing actual json - '{actualJson}'");
+
+            var expectedJsonNormalised = JsonConvert.SerializeObject(expectedObject);
+            var actualJsonNormalised = JsonConvert.SerializeObject(actualObject);
+
+            actualJson?.JsonCompare(expectedJson).Should().BeTrue(
+                $"\r\nExpected json:\r\n{expectedJsonNormalised}\r\nActual Json:\r\n{actualJsonNormalised}\r\n"
+            );
         }
 
         /// <summary>
@@ -377,7 +514,7 @@ namespace CDR.DataHolder.IntegrationTests
             {
                 claims.FirstOrDefault(claim => claim.Type == claimType && claim.Value == claimValue).Should().NotBeNull($"Expected {claimType}={claimValue}");
             }
-        }      
+        }
 
         public const string AUTHORISE_OTP = "000789";
 
@@ -431,9 +568,8 @@ namespace CDR.DataHolder.IntegrationTests
                 case TokenType.BUSINESS_2:
                 case TokenType.BEVERAGE:
                 case TokenType.KAMILLA_SMITH:
-                    // case TokenType.MARY_MOSS: 
                     {
-                        (var authCode, _, var codeVerifier) = await new DataHolder_Authorise_APIv2
+                        (var authCode, _) = await new DataHolder_Authorise_APIv2
                         {
                             UserId = tokenType.UserId(),
                             OTP = AUTHORISE_OTP,
@@ -441,7 +577,7 @@ namespace CDR.DataHolder.IntegrationTests
                             Scope = scope
                         }.Authorise();
 
-                        var accessToken = await DataHolder_Token_API.GetAccessToken(authCode, codeVerifier);
+                        var accessToken = await DataHolder_Token_API.GetAccessToken(authCode);
 
                         return accessToken;
                     }
@@ -458,44 +594,7 @@ namespace CDR.DataHolder.IntegrationTests
             }
         }
 
-        public static async Task<DataHolder_Token_API.Response> GetToken(
-            TokenType tokenType,
-            int tokenLifetime = 3600,
-            int sharingDuration = 7776000)
-        {
-            // Perform authorise and consent flow and get authCode
-            (var authCode, _, var codeVerifier) = await new DataHolder_Authorise_APIv2
-            {
-                UserId = tokenType switch
-                {
-                    TokenType.MARY_MOSS => BaseTest.USERID_MARYMOSS,
-                    _ => throw new Exception($"{nameof(GetToken)} - Unsupported token type - {tokenType}")
-                },
-                SelectedAccountIds = tokenType switch
-                {
-                    TokenType.MARY_MOSS => ACCOUNTIDS_ALL_MARY_MOSS,
-                    _ => throw new Exception($"{nameof(GetToken)} - Unsupported token type - {tokenType}")
-                },
-                OTP = BaseTest.AUTHORISE_OTP,
-                Scope = SCOPE,
-                TokenLifetime = tokenLifetime,
-                SharingDuration = sharingDuration,
-            }.Authorise();
-
-            // User authCode to get tokens
-            var tokenResponse = await DataHolder_Token_API.GetResponse(authCode, codeVerifier: codeVerifier);
-            if (tokenResponse == null) throw new Exception($"{nameof(GetToken)} - TokenResponse is null");
-            if (tokenResponse.IdToken == null) throw new Exception($"{nameof(GetToken)} - Id token is null");
-            if (tokenResponse.AccessToken == null) throw new Exception($"{nameof(GetToken)} - Access token is null");
-            if (tokenResponse.RefreshToken == null) throw new Exception($"{nameof(GetToken)} - Refresh token is null");
-            if (tokenResponse.CdrArrangementId == null) throw new Exception($"{nameof(GetToken)} - CdrArrangementId is null");
-
-            // Return access token
-            return tokenResponse;
-        }
-
-        public static async Task<DataHolder_Token_API.Response> GetTokenWithRequestObject(
-            TokenType tokenType,
+        public static async Task<DataHolder_Token_API.Response> GetToken(TokenType tokenType,
             int tokenLifetime = 3600,
             int sharingDuration = 7776000)
         {
@@ -505,55 +604,58 @@ namespace CDR.DataHolder.IntegrationTests
                 UserId = tokenType switch
                 {
                     TokenType.MARY_MOSS => BaseTest.USERID_MARYMOSS,
-                    _ => throw new Exception($"{nameof(GetTokenWithRequestObject)} - Unsupported token type - {tokenType}")
+                    _ => throw new ArgumentException($"{nameof(GetToken)} - Unsupported token type - {tokenType}")
                 },
                 SelectedAccountIds = tokenType switch
                 {
                     TokenType.MARY_MOSS => ACCOUNTIDS_ALL_MARY_MOSS,
-                    _ => throw new Exception($"{nameof(GetTokenWithRequestObject)} - Unsupported token type - {tokenType}")
+                    _ => throw new ArgumentException($"{nameof(GetToken)} - Unsupported token type - {tokenType}")
                 },
                 OTP = BaseTest.AUTHORISE_OTP,
                 Scope = SCOPE,
                 TokenLifetime = tokenLifetime,
                 SharingDuration = sharingDuration
-            }.AuthoriseWithRequestObject();
+            }.Authorise();
 
             // User authCode to get tokens
             var tokenResponse = await DataHolder_Token_API.GetResponse(authCode);
-            if (tokenResponse == null) throw new Exception($"{nameof(GetTokenWithRequestObject)} - TokenResponse is null");
-            if (tokenResponse.IdToken == null) throw new Exception($"{nameof(GetTokenWithRequestObject)} - Id token is null");
-            if (tokenResponse.AccessToken == null) throw new Exception($"{nameof(GetTokenWithRequestObject)} - Access token is null");
-            if (tokenResponse.RefreshToken == null) throw new Exception($"{nameof(GetTokenWithRequestObject)} - Refresh token is null");
-            if (tokenResponse.CdrArrangementId == null) throw new Exception($"{nameof(GetTokenWithRequestObject)} - CdrArrangementId is null");
+            if (tokenResponse == null) throw new NullException($"{nameof(GetToken)} - TokenResponse is null");
+            if (tokenResponse.IdToken == null) throw new NullException($"{nameof(GetToken)} - Id token is null");
+            if (tokenResponse.AccessToken == null) throw new NullException($"{nameof(GetToken)} - Access token is null");
+            if (tokenResponse.RefreshToken == null) throw new NullException($"{nameof(GetToken)} - Refresh token is null");
+            if (tokenResponse.CdrArrangementId == null) throw new NullException($"{nameof(GetToken)} - CdrArrangementId is null");
 
             // Return access token
             return tokenResponse;
         }
 
-        protected enum Table { LEGALENTITY, BRAND, SOFTWAREPRODUCT }
+        protected enum EntityType { SOFTWAREPRODUCT, LEGALENTITY, BRAND }
+        protected enum Status { STATUS, LEGALENTITYSTATUS, BRANDSTATUS } //STATUS - SoftwareProduct Status, rest of the status as name implies
 
-        static protected string GetStatus(Table table, string id)
+        static protected string GetStatus(EntityType entityType, string id)
         {
-            using var connection = new SqlConnection(DATAHOLDER_CONNECTIONSTRING);
+            using var connection = new SqlConnection(AUTHSERVER_CONNECTIONSTRING);
             connection.Open();
 
-            using var selectCommand = new SqlCommand($"select status from {table} where {table}ID = @id", connection);
+            var statusColumnName = entityType == EntityType.SOFTWAREPRODUCT ? Status.STATUS.ToString() : $"{entityType}Status";
+            using var selectCommand = new SqlCommand($"select {statusColumnName} from softwareproducts where {entityType}ID = @id", connection);
             selectCommand.Parameters.AddWithValue("@id", id);
 
             return selectCommand.ExecuteScalarString();
         }
 
-        static protected void SetStatus(Table table, string id, string status)
+        static protected void SetStatus(EntityType entityType, string id, string status)
         {
-            using var connection = new SqlConnection(DATAHOLDER_CONNECTIONSTRING);
+            using var connection = new SqlConnection(AUTHSERVER_CONNECTIONSTRING);
             connection.Open();
 
-            using var updateCommand = new SqlCommand($"update {table} set status = @status where {table}ID = @id", connection);
+            var statusColumnName = entityType == EntityType.SOFTWAREPRODUCT ? Status.STATUS.ToString() : $"{entityType}Status";
+            using var updateCommand = new SqlCommand($"update softwareproducts set {statusColumnName} = @status where {entityType}ID = @id", connection);
             updateCommand.Parameters.AddWithValue("@id", id);
             updateCommand.Parameters.AddWithValue("@status", status);
             updateCommand.ExecuteNonQuery();
 
-            if (GetStatus(table, id) != status)
+            if (string.Compare(GetStatus(entityType, id), status.ToString()) != 0)
             {
                 throw new Exception("Status not updated");
             }
@@ -576,15 +678,15 @@ namespace CDR.DataHolder.IntegrationTests
         /// <summary>
         /// IdPermanence encryption
         /// </summary>
-        static protected string IdPermanenceEncrypt(string plainText, string customerId, string softwareProductId)
+        static protected string IdPermanenceEncrypt(string plainText, string loginid, string softwareProductId)
         {
-            customerId = customerId.ToLower();
+            loginid = loginid.ToLower();
             softwareProductId = softwareProductId.ToLower();
 
             var idParameters = new IdPermanenceParameters
             {
                 SoftwareProductId = softwareProductId,
-                CustomerId = customerId,
+                CustomerId = loginid,
             };
 
             var encrypted = IdPermanenceHelper.EncryptId(plainText, idParameters, IDPERMANENCE_PRIVATEKEY);
@@ -593,38 +695,30 @@ namespace CDR.DataHolder.IntegrationTests
         }
 
         /// <summary>
-        /// Extract customerId (by decrypting "sub" claim).
-        /// Also extract "client-id", "software_id" and "sector_identifier_uri" claims
+        /// Extract loginId (by decrypting "sub" claim).
         /// </summary>
-        static protected void ExtractClaimsFromToken(string? accessToken, out string customerId, out string softwareProductId, bool useRandomIV = true)
+        static protected void ExtractClaimsFromToken(string? accessToken, out string loginId, out string softwareProductId, bool useRandomIV = true)
         {
             var jwt = new JwtSecurityTokenHandler().ReadJwtToken(accessToken);
 
             softwareProductId = jwt.Claim("software_id").Value;
-            var sectorIdentifierUri = jwt.Claim("sector_identifier_uri").Value;
 
-            // Decrypt sub to extract customerId
+            // Decrypt sub to extract loginId
             var sub = jwt.Claim("sub").Value;
-            customerId = IdPermanenceHelper.DecryptSub(
+            loginId = IdPermanenceHelper.DecryptSub(
                 sub,
                 new SubPermanenceParameters
                 {
                     SoftwareProductId = softwareProductId,
-                    SectorIdentifierUri = sectorIdentifierUri
+                    SectorIdentifierUri = SOFTWAREPRODUCT_SECTOR_IDENTIFIER_URI
                 },
-                BaseTest.IDPERMANENCE_PRIVATEKEY
+                IDPERMANENCE_PRIVATEKEY
             );
         }
 
         static public void WriteStringToFile(string filename, string? str)
         {
             File.WriteAllText(filename, str);
-        }
-
-        static public void WriteJWTtoFile(string filename, string jwt)
-        {
-            var decodedJWT = new JwtSecurityTokenHandler().ReadJwtToken(jwt);
-            File.WriteAllText(filename, decodedJWT.ToJson());
         }
 
         static public void WriteJsonToFile(string filename, string json)

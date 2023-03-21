@@ -1,30 +1,35 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using CDR.DataHolder.Repository.Infrastructure;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using System.Threading.Tasks;
+using CDR.DataHolder.API.Infrastructure.Filters;
 using CDR.DataHolder.API.Infrastructure.Middleware;
 using CDR.DataHolder.Domain.Repositories;
 using CDR.DataHolder.Repository;
-using Serilog;
-using System.IO;
-using CDR.DataHolder.API.Infrastructure.Filters;
-using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
-using System;
-using Microsoft.AspNetCore.Http;
-using Newtonsoft.Json;
-using System.Linq;
+using CDR.DataHolder.Repository.Infrastructure;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using Serilog;
+using System;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace CDR.DataHolder.Manage.API
 {
     public class Startup
     {
+        static private bool healthCheckMigration = false;
+        static private string healthCheckMigrationMessage = null;
+        static private bool healthCheckSeedData = false;
+        static private string healthCheckSeedDataMessage = null;
+
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
@@ -54,6 +59,12 @@ namespace CDR.DataHolder.Manage.API
             string connStr = Configuration.GetConnectionString(DbConstants.ConnectionStringNames.Resource.Logging);
             int seedDataTimeSpan = Configuration.GetValue<int>("SeedData:TimeSpan");
             services.AddHealthChecks()
+
+                    .AddCheck("migration", () => healthCheckMigration ? HealthCheckResult.Healthy(healthCheckMigrationMessage) : HealthCheckResult.Unhealthy(healthCheckMigrationMessage))
+
+                    // implemented "seed-data2" here just in case
+                    .AddCheck("seed-data2", () => healthCheckSeedData ? HealthCheckResult.Healthy(healthCheckSeedDataMessage) : HealthCheckResult.Unhealthy(healthCheckSeedDataMessage))
+
                     .AddCheck("sql-connection", () => {
                         using (var db = new SqlConnection(connStr))
                         {
@@ -68,7 +79,13 @@ namespace CDR.DataHolder.Manage.API
                         }
                         return HealthCheckResult.Healthy();
                     })
+
                     .AddCheck("seed-data", () => {
+                        if (!SeedData())
+                        {
+                            return HealthCheckResult.Healthy("Seed data not configured");
+                        }
+
                         using (var db = new SqlConnection(connStr))
                         {
                             try
@@ -170,11 +187,10 @@ namespace CDR.DataHolder.Manage.API
         {
             using (var serviceScope = app.ApplicationServices.GetService<IServiceScopeFactory>().CreateScope())
             {               
-                const string HEALTHCHECK_READY_FILENAME = "_healthcheck_ready"; // MJS - Should be using ASPNet health check, not a file
-                File.Delete(HEALTHCHECK_READY_FILENAME);
-
                 if (RunMigrations())
                 {
+                    healthCheckMigrationMessage = "Migration in progress";
+
                     // Use DBO connection string since it has DBO rights needed to update db schema
                     var optionsBuilder = new DbContextOptionsBuilder<DataHolderDatabaseContext>();
                     optionsBuilder.UseSqlServer(Configuration.GetConnectionString(DbConstants.ConnectionStringNames.Resource.Migrations)
@@ -183,7 +199,10 @@ namespace CDR.DataHolder.Manage.API
                     // Ensure the database is created and up to date.
                     using var dbMigrationsContext = new DataHolderDatabaseContext(optionsBuilder.Options);
                     dbMigrationsContext.Database.Migrate();
+
+                    healthCheckMigrationMessage = "Migration completed";
                 }
+                healthCheckMigration = true;
 
                 // Seed the database using the sample data JSON.
                 var seedDataFilePath = Configuration.GetValue<string>("SeedData:FilePath");
@@ -192,12 +211,19 @@ namespace CDR.DataHolder.Manage.API
 
                 if (!string.IsNullOrEmpty(seedDataFilePath))
                 {
+                    healthCheckSeedDataMessage = "Seeding of data in progress";
+
                     var context = serviceScope.ServiceProvider.GetRequiredService<DataHolderDatabaseContext>();
                     logger.LogInformation("Seed data file found within configuration.  Attempting to seed the repository from the seed data...");
                     Task.Run(() => context.SeedDatabaseFromJsonFile(seedDataFilePath, logger, seedDataOverwrite, offsetDates)).Wait();
+
+                    healthCheckSeedDataMessage = "Seeding of data completed";
                 }
-                
-                File.WriteAllText(HEALTHCHECK_READY_FILENAME, "");  // Create file to indicate MDH is ready, this can be used by Docker/Dockercompose health checks // MJS - Should be using ASPNet health check, not a file
+                else
+                {
+                    healthCheckSeedDataMessage = "Data is not seeded based on configuration";
+                }
+                healthCheckSeedData = true;
             }
         }
 
@@ -209,6 +235,12 @@ namespace CDR.DataHolder.Manage.API
             // Run migrations if the DBO connection string is set.
             var dbo = Configuration.GetConnectionString(DbConstants.ConnectionStringNames.Resource.Migrations);
             return !string.IsNullOrEmpty(dbo);
+        }
+
+        private bool SeedData()
+        {
+            var seedDataFilePath = Configuration.GetValue<string>("SeedData:FilePath");
+            return !string.IsNullOrEmpty(seedDataFilePath);
         }
 
         private static Task CustomResponseWriter(HttpContext context, HealthReport healthReport)
