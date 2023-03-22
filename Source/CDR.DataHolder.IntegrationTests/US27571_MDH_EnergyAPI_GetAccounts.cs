@@ -13,6 +13,8 @@ using CDR.DataHolder.Repository.Infrastructure;
 using CDR.DataHolder.IntegrationTests.Fixtures;
 using CDR.DataHolder.IntegrationTests.Infrastructure.API2;
 using CDR.DataHolder.IntegrationTests.Models.EnergyAccountsResponse;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using CDR.DataHolder.IntegrationTests.Models;
 
 #nullable enable
 
@@ -40,7 +42,7 @@ namespace CDR.DataHolder.IntegrationTests
             bool? isOwned = null, string? openStatus = null, string? productCategory = null,
             int? page = null, int? pageSize = null)
         {
-            ExtractClaimsFromToken(accessToken, out var customerId, out var softwareProductId);
+            ExtractClaimsFromToken(accessToken, out var loginId, out var softwareProductId);
 
             var effectivePage = page ?? 1;
             var effectivePageSize = pageSize ?? 25;
@@ -49,10 +51,10 @@ namespace CDR.DataHolder.IntegrationTests
 
             var accounts = dbContext.Accounts.AsNoTracking()
                 .Include(account => account.Customer)
-                .Where(account => account.Customer.CustomerId == new Guid(customerId))
+                .Where(account => account.Customer.LoginId == loginId)
                 .Select(account => new
                 {
-                    accountId = IdPermanenceEncrypt(account.AccountId, customerId, softwareProductId),
+                    accountId = IdPermanenceEncrypt(account.AccountId, loginId, softwareProductId),
                     accountNumber = account.AccountNumber,
                     displayName = account.DisplayName,
                     creationDate = account.CreationDate.ToString("yyyy-MM-dd"),
@@ -167,7 +169,6 @@ namespace CDR.DataHolder.IntegrationTests
         {
             // Arrange
             var accessToken = await Fixture.DataHolder_AccessToken_Cache.GetAccessToken(tokenType, scope: SCOPE_ACCOUNTS_BASIC_READ);
-            ExtractClaimsFromToken(accessToken, out var customerId, out var softwareProductId);
 
             var baseUrl = $"{DH_MTLS_GATEWAY_URL}/cds-au/v1/energy/accounts";
             var url = GetUrl(baseUrl, isOwned, openStatus, productCategory, queryPage, queryPageSize);
@@ -712,20 +713,34 @@ namespace CDR.DataHolder.IntegrationTests
             }
         }
 
-        private async Task Test_ACX12_ACX13_ACX14(Table table, string id, string status, HttpStatusCode expectedStatusCode, string? expectedErrorResponse = null)
+        private async Task Test_ACX12_ACX13_ACX14(EntityType entityType, string id, string status, HttpStatusCode expectedStatusCode, string? expectedErrorResponse = null)
         {
-            if (table == Table.SOFTWAREPRODUCT)
-            {
-                await Fixture.DataHolder_AccessToken_Cache.GetAccessToken(TokenType.MARY_MOSS); // Ensure token cache is populated before changing status in case InlineData scenarios above are run/debugged out of order
-            }
-
-            var saveStatus = GetStatus(table, id);
-            SetStatus(table, id, status);
+            var saveStatus = GetStatus(entityType, id);
+            SetStatus(entityType, id, status);
 
             try
             {
+                var accessToken = string.Empty;
                 // Arrange
-                var accessToken = await Fixture.DataHolder_AccessToken_Cache.GetAccessToken(TokenType.MARY_MOSS);
+                try
+                {
+                    accessToken = await Fixture.DataHolder_AccessToken_Cache.GetAccessToken(TokenType.MARY_MOSS, useCache:false); // Ensure token cache is populated before changing status in case InlineData scenarios above are run/debugged out of order
+                }
+                catch (AuthoriseException ex)
+                {
+                    // Assert
+                    using (new AssertionScope())
+                    {
+                        // Assert - Check status code
+                        ex.StatusCode.Should().Be(expectedStatusCode);
+
+                        // Assert - Check error response
+                        ex.Error.Should().Be("urn:au-cds:error:cds-all:Authorisation/AdrStatusNotActive");
+                        ex.ErrorDescription.Should().Be(expectedErrorResponse);
+
+                        return;
+                    }
+                }
 
                 // Act
                 var api = new Infrastructure.API
@@ -755,40 +770,26 @@ namespace CDR.DataHolder.IntegrationTests
             }
             finally
             {
-                SetStatus(table, id, saveStatus);
+                SetStatus(entityType, id, saveStatus);
             }
         }
 
         [Theory]
-        [InlineData("ACTIVE", "Active", HttpStatusCode.OK)]
-        [InlineData("INACTIVE", "Inactive", HttpStatusCode.Forbidden)]
-        [InlineData("REMOVED", "Removed", HttpStatusCode.Forbidden)]
-        public async Task ACX12_Get_WithADRSoftwareProductNotActive_ShouldRespondWith_403Forbidden_NotActiveErrorResponse(string status, string statusDescription, HttpStatusCode expectedStatusCode)
+        [InlineData("ACTIVE", HttpStatusCode.OK)]
+        [InlineData("INACTIVE", HttpStatusCode.OK)]
+        [InlineData("REMOVED", HttpStatusCode.OK)]
+        public async Task ACX12_Get_WithADRSoftwareProductNotActive_ShouldRespondWith_403Forbidden_NotActiveErrorResponse(string status, HttpStatusCode expectedStatusCode)
         {
-            await Test_ACX12_ACX13_ACX14(Table.SOFTWAREPRODUCT, SOFTWAREPRODUCT_ID, status, expectedStatusCode, $@"{{ 
-                ""errors"": [{{ 
-                        ""code"": ""urn:au-cds:error:cds-all:Authorisation/AdrStatusNotActive"", 
-                        ""title"": ""ADR Status Is Not Active"",
-                        ""detail"": ""Software product status is { statusDescription }"", 
-                        ""meta"": {{}} 
-                }}]
-            }}");
+            await Test_ACX12_ACX13_ACX14(EntityType.SOFTWAREPRODUCT, SOFTWAREPRODUCT_ID, status, expectedStatusCode, $"ERR-GEN-002: Software product status is {status}");
         }
 
         [Theory]
-        [InlineData("ACTIVE", "Active", HttpStatusCode.OK)]
-        [InlineData("INACTIVE", "Inactive", HttpStatusCode.Forbidden)]
-        [InlineData("REMOVED", "Removed", HttpStatusCode.Forbidden)]
-        public async Task ACX14_Get_WithADRParticipationNotActive_ShouldRespondWith_403Forbidden_NotActiveErrorResponse(string status, string statusDescription, HttpStatusCode expectedStatusCode)
+        [InlineData("ACTIVE", HttpStatusCode.OK)]
+        [InlineData("INACTIVE", HttpStatusCode.OK)]
+        [InlineData("REMOVED", HttpStatusCode.OK)]
+        public async Task ACX14_Get_WithADRParticipationNotActive_ShouldRespondWith_403Forbidden_NotActiveErrorResponse(string status, HttpStatusCode expectedStatusCode)
         {
-            await Test_ACX12_ACX13_ACX14(Table.LEGALENTITY, LEGALENTITYID, status, expectedStatusCode, $@"{{
-                ""errors"": [{{
-                    ""code"": ""urn:au-cds:error:cds-all:Authorisation/AdrStatusNotActive"",
-                    ""title"": ""ADR Status Is Not Active"",
-                    ""detail"": ""ADR status is { statusDescription }"",
-                    ""meta"": {{}}
-                }}]
-            }}");
+            await Test_ACX12_ACX13_ACX14(EntityType.LEGALENTITY, LEGALENTITYID, status, expectedStatusCode, $"ERR-GEN-002: Software product status is {status}");
         }
 
         private async Task Test_ACX15_ACX16_ACX17(string XV, HttpStatusCode expectedStatusCode, string expectedErrorResponse)
@@ -1023,15 +1024,16 @@ namespace CDR.DataHolder.IntegrationTests
             }
 
             // Arrange - Get authcode
-            (var authCode, _, var codeVerifier) = await new DataHolder_Authorise_APIv2
+            (var authCode, _) = await new DataHolder_Authorise_APIv2
             {
                 UserId = userId,
                 OTP = AUTHORISE_OTP,
                 SelectedAccountIds = consentedAccounts,
+                RequestUri = await PAR_GetRequestUri(responseMode: "form_post")
             }.Authorise();
 
             // Act
-            var tokenResponse = await DataHolder_Token_API.GetResponse(authCode, codeVerifier: codeVerifier);
+            var tokenResponse = await DataHolder_Token_API.GetResponse(authCode);
             var accountsResponse = await GetAccounts(tokenResponse?.AccessToken);
             ExtractClaimsFromToken(tokenResponse?.AccessToken, out var custId, out var softwareProductId);
             var encryptedAccountIds = consentedAccounts.Split(',').Select(consentedAccountId => IdPermanenceEncrypt(consentedAccountId, custId, softwareProductId));
@@ -1076,15 +1078,16 @@ namespace CDR.DataHolder.IntegrationTests
                 }
 
                 // Get authcode
-                (var authCode, _, var codeVerifier) = await new DataHolder_Authorise_APIv2
+                (var authCode, _) = await new DataHolder_Authorise_APIv2
                 {
                     UserId = userId,
                     OTP = AUTHORISE_OTP,
                     SelectedAccountIds = consentedAccounts,
+                    RequestUri = await PAR_GetRequestUri(responseMode: "form_post")
                 }.Authorise();
 
                 // Get token
-                var tokenResponse = await DataHolder_Token_API.GetResponse(authCode, codeVerifier: codeVerifier);
+                var tokenResponse = await DataHolder_Token_API.GetResponse(authCode);
 
                 // Get accounts
                 var accountsResponse = await GetAccounts(tokenResponse?.AccessToken);

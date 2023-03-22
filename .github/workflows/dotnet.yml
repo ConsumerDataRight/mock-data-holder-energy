@@ -43,6 +43,27 @@ jobs:
       uses: actions/checkout@v2
       with:
         path: ./mock-data-holder-energy
+    
+    - name: Checkout Authorisation Server (main)
+      if: ${{ github.ref == 'refs/heads/main' }}
+      uses: actions/checkout@v2
+      with:
+        repository: consumerdataright/authorisation-server
+        ref: github.ref
+        path: ./cdr-auth-server
+
+    - name: Checkout Authorisation Server (develop)
+      if: ${{ github.ref != 'refs/heads/main' }}
+      uses: actions/checkout@v2
+      with:
+        repository: consumerdataright/authorisation-server
+        ref: 'refs/heads/develop'
+        path: ./cdr-auth-server
+
+    #copy the authorisation-server code into dataholder
+    - name: Copy cdr-auth-server folder into mock-data-holder-energy
+      run: |
+        cp -r ${{ github.workspace }}/cdr-auth-server ${{ github.workspace }}/mock-data-holder-energy/Source/cdr-auth-server
 
     - name: Pull Mock Register Image (main)
       if: ${{ github.ref == 'refs/heads/main' }}
@@ -67,7 +88,7 @@ jobs:
     # Build mock-data-holder-energy image
     - name: Build the mock-data-holder-energy image
       run: |
-        docker build ./mock-data-holder-energy/Source --file ./mock-data-holder-energy/Source/Dockerfile.for-testing --tag mock-data-holder-energy:latest
+        docker build ./mock-data-holder-energy/Source --file ./mock-data-holder-energy/Source/Dockerfile --tag mock-data-holder-energy:latest
     # Build mock-data-holder-energy-unit-tests image
     - name: Build the mock-data-holder-energy-unit-tests-energy image
       run: |

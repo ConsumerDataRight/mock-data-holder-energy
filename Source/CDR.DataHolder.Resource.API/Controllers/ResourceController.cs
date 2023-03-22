@@ -60,24 +60,17 @@ namespace CDR.DataHolder.Resource.API.Controllers
 		public async Task<IActionResult> GetCustomer()
 		{
 
-			// Each customer id is different for each ADR based on PPID.
-			// Therefore we need to look up the CustomerClient table to find the actual customer id.
-			// This can be done once we have a client id (Registration) and a valid access token.
-			var customerId = GetCustomerId(this.User);
-			if (customerId == Guid.Empty)
-			{
-				// Implement response handling when the acceptance criteria is available.
-				return BadRequest();
-			}
+            // Each customer id is different for each ADR based on PPID.
+            // Therefore we need to look up the CustomerClient table to find the actual customer id.
+            // This can be done once we have a client id (Registration) and a valid access token.
+            var loginId = GetCustomerLoginId(this.User);
+            if (string.IsNullOrEmpty(loginId))
+            {
+                // Implement response handling when the acceptance criteria is available.
+                return BadRequest();
+            }
 
-			// Check the status of the data recipient.
-			var statusErrors = await ValidateDataRecipientStatus();
-			if (statusErrors.HasErrors())
-			{
-				return new DataHolderForbidResult(statusErrors);
-			}
-
-			var response = _mapper.Map<ResponseCommonCustomer>(await _resourceRepository.GetCustomer(customerId));
+			var response = _mapper.Map<ResponseCommonCustomer>(await _resourceRepository.GetCustomerByLoginId(loginId));
 			if (response == null)
 			{
 				return BadRequest();
@@ -100,28 +93,18 @@ namespace CDR.DataHolder.Resource.API.Controllers
 			[FromQuery(Name = "page-size"), CheckPageSize] string pageSize)
 		{
 
-			// Each customer id is different for each ADR based on PPID.
-			// Therefore we need to look up the CustomerClient table to find the actual customer id.
-			// This can be done once we have a client id (Registration) and a valid access token.
-			var customerId = GetCustomerId(this.User);
-			if (customerId == Guid.Empty)
-			{
-				return new BadRequestObjectResult(new ResponseErrorList(Error.UnknownError()));
-			}
-
-			// Check the status of the data recipient.
-			var statusErrors = await ValidateDataRecipientStatus();
-			if (statusErrors.HasErrors())
-			{
-				return new DataHolderForbidResult(statusErrors);
-			}
+            // Each customer id is different for each ADR based on PPID.
+            // Therefore we need to look up the CustomerClient table to find the actual customer id.
+            // This can be done once we have a client id (Registration) and a valid access token.
+            var loginId = GetCustomerLoginId(this.User);
+            if (string.IsNullOrEmpty(loginId))
+            {
+                return new BadRequestObjectResult(new ResponseErrorList(Error.UnknownError()));
+            }
 
 			// Get energy accounts
 			var accountIds = GetAccountIds(User);
-			var accountFilter = new EnergyAccountFilter(accountIds)
-			{
-				CustomerId = customerId,
-			};
+			var accountFilter = new EnergyAccountFilter(accountIds);
 			int pageNumber = string.IsNullOrEmpty(page) ? 1 : int.Parse(page);
 			int pageSizeNumber = string.IsNullOrEmpty(pageSize) ? 25 : int.Parse(pageSize);
 			var accounts = await _resourceRepository.GetAllEnergyAccounts(accountFilter, pageNumber, pageSizeNumber);
@@ -138,7 +121,7 @@ namespace CDR.DataHolder.Resource.API.Controllers
 			var idParameters = new IdPermanenceParameters
 			{
 				SoftwareProductId = softwareProductId,
-				CustomerId = customerId.ToString()
+				CustomerId = loginId
 			};
 
 			_idPermanenceManager.EncryptIds(response.Data.Accounts, idParameters, a => a.AccountId);
@@ -168,28 +151,22 @@ namespace CDR.DataHolder.Resource.API.Controllers
 				AccountId = accountId
 			};
 
-			// Each customer id is different for each ADR based on PPID.
-			// Therefore we need to look up the CustomerClient table to find the actual customer id.
-			// This can be done once we have a client id (Registration) and a valid access token.
-			request.CustomerId = GetCustomerId(this.User);
-			if (request.CustomerId == Guid.Empty)
-			{
-				return new BadRequestObjectResult(new ResponseErrorList(Error.UnknownError()));
-			}
+            // Each customer id is different for each ADR based on PPID.
+            // customer id is not required for account when account id is available
+            // This can be done once we have a client id (Registration) and a valid access token.
+            var loginId = GetCustomerLoginId(this.User);
 
-			// Check the status of the data recipient.
-			var statusErrors = await ValidateDataRecipientStatus();
-			if (statusErrors.HasErrors())
-			{
-				return new DataHolderForbidResult(statusErrors);
-			}
+            if (string.IsNullOrEmpty(loginId))
+            {
+                return new BadRequestObjectResult(new ResponseErrorList(Error.UnknownError()));
+            }
 
 			// Decrypt the incoming account id (ID Permanence rules).
 			var softwareProductId = this.User.FindFirst(Constants.TokenClaimTypes.SoftwareId)?.Value;
 			var idParameters = new IdPermanenceParameters
 			{
 				SoftwareProductId = softwareProductId,
-				CustomerId = request.CustomerId.ToString(),
+				CustomerId = loginId
 			};
 
 			request.AccountId = DecryptAccountId(request.AccountId, idParameters);
@@ -204,13 +181,13 @@ namespace CDR.DataHolder.Resource.API.Controllers
 			}
 			else
 			{
-				if (!(await _resourceRepository.CanAccessAccount(request.AccountId, request.CustomerId)))
+				if (!(await _resourceRepository.CanAccessAccount(request.AccountId)))
 				{
 					// A valid consent exists with bank:transactions:read scope but this Account Id could not be found for the supplied Customer Id.
 					// This scenario will take precedence
 					using (LogContext.PushProperty("MethodName", ControllerContext.RouteData.Values["action"].ToString()))
 					{						
-						_logger.LogInformation("Customer does not have access to this Account Id. Customer Id: {CustomerId}, Account Id: {AccountId}", request.CustomerId, request.AccountId);
+						_logger.LogInformation("Customer does not have access to this Account Id. Account Id: {AccountId}", request.AccountId);
 					}
 					return new NotFoundObjectResult(new ResponseErrorList(Error.InvalidEnergyAccount(accountId)));
 				}
@@ -257,71 +234,17 @@ namespace CDR.DataHolder.Resource.API.Controllers
 			return accountId;
 		}
 
-		private async Task<ResponseErrorList> ValidateDataRecipientStatus()
-		{
-			ResponseErrorList errorList = new ResponseErrorList();
-
-			// Get the Product Id from the token
-			var softwareProductId = this.GetSoftwareProductId();
-			if (softwareProductId == null)
-			{
-				errorList.Errors.Add(Error.UnknownError());
-				return errorList;
-			}
-
-			// Get the latest data recipient details from the repository
-			var softwareProduct = await _statusRepository.GetSoftwareProduct(softwareProductId.Value);
-			if (softwareProduct == null)
-			{
-				errorList.Errors.Add(Error.DataRecipientSoftwareProductNotActive());
-				return errorList;
-			}
-
-			if (String.Equals(softwareProduct.Brand.LegalEntity.Status, "Removed", StringComparison.OrdinalIgnoreCase))
-			{
-				errorList.Errors.Add(Error.DataRecipientParticipationRemoved());
-			}
-			else if (String.Equals(softwareProduct.Brand.LegalEntity.Status, "Suspended", StringComparison.OrdinalIgnoreCase))
-			{
-				errorList.Errors.Add(Error.DataRecipientParticipationSuspended());
-			}
-			else if (String.Equals(softwareProduct.Brand.LegalEntity.Status, "Revoked", StringComparison.OrdinalIgnoreCase))
-			{
-				errorList.Errors.Add(Error.DataRecipientParticipationRevoked());
-			}
-			else if (String.Equals(softwareProduct.Brand.LegalEntity.Status, "Surrendered", StringComparison.OrdinalIgnoreCase))
-			{
-				errorList.Errors.Add(Error.DataRecipientParticipationSurrendered());
-			}
-			else if (!softwareProduct.Brand.IsActive || 
-				String.Equals(softwareProduct.Brand.LegalEntity.Status, "Inactive", StringComparison.OrdinalIgnoreCase))
-			{
-				errorList.Errors.Add(Error.DataRecipientParticipationNotActive());
-			}			
-
-			if (String.Equals(softwareProduct.Status, "Inactive", StringComparison.OrdinalIgnoreCase))
+        private static string GetCustomerLoginId(ClaimsPrincipal principal)
+        {
+            var loginId = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(loginId))
             {
-                errorList.Errors.Add(Error.DataRecipientSoftwareProductNotActive());
+                return string.Empty;
             }
-            else if (String.Equals(softwareProduct.Status, "Removed", StringComparison.OrdinalIgnoreCase))
-            {
-                errorList.Errors.Add(Error.DataRecipientSoftwareProductStatusRemoved());
-            }
+            return loginId;
+        }
 
-            return errorList;
-		}
-
-		private static Guid GetCustomerId(ClaimsPrincipal principal)
-		{
-			var customerId = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-			if (!Guid.TryParse(customerId, out var customerIdGuid))
-			{
-				return Guid.Empty;
-			}
-			return customerIdGuid;
-		}
-
-		private static string[] GetAccountIds(ClaimsPrincipal principal)
+        private static string[] GetAccountIds(ClaimsPrincipal principal)
 		{
 			// Check if consumer has granted consent to this account Id
 			return principal.FindAll(Constants.TokenClaimTypes.AccountId)

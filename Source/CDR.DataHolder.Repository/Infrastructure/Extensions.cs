@@ -16,41 +16,6 @@ namespace CDR.DataHolder.Repository.Infrastructure
         private static Regex datetimeMatchRegex = new Regex("[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z", RegexOptions.Compiled);
 
         /// <summary>
-        /// Retrieves all participant metadata from the database, serialises to JSON and return as a string.
-        /// </summary>
-        public async static Task<string> GetJsonFromDatabase(
-            this DataHolderDatabaseContext databaseContext,
-            ILogger logger)
-        {
-            var regData = await databaseContext.LegalEntities.AsNoTracking().OrderBy(l => l.LegalEntityName)
-                .Include(prop => prop.Brands)
-                .ThenInclude(prop => prop.SoftwareProducts)
-				.ToListAsync();
-
-            var planData = await databaseContext.Plans.AsNoTracking().OrderBy(p=>p.DisplayName)
-               .ToListAsync();
-
-            var dhData = await databaseContext.Customers.AsNoTracking().OrderBy(c => c.CustomerId)
-                .Include(prop => prop.Person)
-                .Include(prop => prop.Organisation)
-                .Include(prop => prop.Accounts)
-                    .ThenInclude(prop => prop.AccountPlans)
-                        .ThenInclude(prop => prop.PlanOverview)
-                 .Include(prop => prop.Accounts)
-                    .ThenInclude(prop => prop.AccountPlans)
-                        .ThenInclude(prop => prop.ServicePoints)
-                .ToListAsync();
-
-            var allData = new { Customers = dhData, Plans= planData, LegalEntities = regData };
-
-            return JsonConvert.SerializeObject(allData, new JsonSerializerSettings()
-            {
-                ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-                NullValueHandling = NullValueHandling.Ignore,
-            });
-        }
-
-        /// <summary>
         /// This is the initial database seed. If there are records in the database, this will not re-seed the database
         /// </summary>
         public async static Task SeedDatabaseFromJsonFile(
@@ -120,11 +85,6 @@ namespace CDR.DataHolder.Repository.Infrastructure
                     dataHolderDatabaseContext.RemoveRange(existingOrgs);
                     dataHolderDatabaseContext.SaveChanges();
 
-                    // Remove all existing legal entity data in the system
-                    var legalEntities = await dataHolderDatabaseContext.LegalEntities.AsNoTracking().ToListAsync();
-                    dataHolderDatabaseContext.RemoveRange(legalEntities);
-                    dataHolderDatabaseContext.SaveChanges();
-
                     // Remove all existing plans.
                     var existingPlans = await dataHolderDatabaseContext.Plans.AsNoTracking().ToListAsync();
                     var existingPlanOverviews = await dataHolderDatabaseContext.PlanOverviews.AsNoTracking().ToListAsync();
@@ -155,10 +115,8 @@ namespace CDR.DataHolder.Repository.Infrastructure
 
                     // Re-create all participants from the incoming JSON file.
                     var allData = JsonConvert.DeserializeObject<JObject>(json);
-                    var newLegalEntities = allData["LegalEntities"].ToObject<LegalEntity[]>();
                     var newPlans = allData["Plans"].ToObject<Plan[]>();
                     var newCustomers = allData["Customers"].ToObject<Customer[]>();
-                    dataHolderDatabaseContext.LegalEntities.AddRange(newLegalEntities);
                     dataHolderDatabaseContext.Plans.AddRange(newPlans);
                     dataHolderDatabaseContext.Customers.AddRange(newCustomers);
                     dataHolderDatabaseContext.SaveChanges();

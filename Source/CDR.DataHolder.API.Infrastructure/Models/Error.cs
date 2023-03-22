@@ -187,13 +187,13 @@ namespace CDR.DataHolder.API.Infrastructure.Models
         }
 
 
-        public static Error UnsupportedVersion()
+        public static Error UnsupportedVersion(int? minVersion = null, int? maxVersion = null)
         {
             return new Error()
             {
                 Code = "urn:au-cds:error:cds-all:Header/UnsupportedVersion",
                 Title = "Unsupported Version",
-                Detail = "",
+                Detail = (minVersion.HasValue && maxVersion.HasValue) ? $"The minimum supported version is {minVersion}. The maximum supported version is {maxVersion}." : "",
                 Meta = new object()
             };
         }

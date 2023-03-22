@@ -209,8 +209,22 @@
       "UpstreamPathTemplate": "/cds-au/v1/admin/metrics",
       "UpstreamHttpMethod": [ "GET" ],
       "DangerousAcceptAnyServerCertificateValidator": true
-    }
+    },
 
+    // Authorization server endpoint for Admin metadata updata
+    {
+      "DownstreamPathTemplate": "/cds-au/v1/admin/register/metadata",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 8101
+        }
+      ],
+      "UpstreamPathTemplate": "/cds-au/v1/admin/register/metadata",
+      "UpstreamHttpMethod": [ "POST" ],
+      "DangerousAcceptAnyServerCertificateValidator": true
+    }
   ],
   "GlobalConfiguration": {
     "BaseUrl": "https://localhost:8102"

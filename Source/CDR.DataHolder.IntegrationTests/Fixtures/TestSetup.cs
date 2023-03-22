@@ -24,7 +24,7 @@ namespace CDR.DataHolder.IntegrationTests.Fixtures
             string redirectURI = BaseTest.SOFTWAREPRODUCT_REDIRECT_URI_FOR_INTEGRATION_TESTS)
         {
             redirectURI = BaseTest.SubstituteConstant(redirectURI);
-            
+
             using var connection = new SqlConnection(BaseTest.REGISTER_CONNECTIONSTRING);
             connection.Open();
 
@@ -51,7 +51,7 @@ namespace CDR.DataHolder.IntegrationTests.Fixtures
             string jwksURI = BaseTest.SOFTWAREPRODUCT_JWKS_URI_FOR_INTEGRATION_TESTS)
         {
             jwksURI = BaseTest.SubstituteConstant(jwksURI);
-            
+
             using var connection = new SqlConnection(BaseTest.REGISTER_CONNECTIONSTRING);
             connection.Open();
 
@@ -85,12 +85,12 @@ namespace CDR.DataHolder.IntegrationTests.Fixtures
         }
 
         /// <summary>
-        /// Clear data from the Dataholder's IdentityServer database
+        /// Clear data from the Dataholder's AuthServer database
         /// </summary>
         /// <param name="onlyPersistedGrants">Only clear the persisted grants table</param>
-        static public void DataHolder_PurgeIdentityServer(bool onlyPersistedGrants = false)
+        static public void DataHolder_PurgeAuthServer(bool onlyPersistedGrants = false)
         {
-            using var connection = new SqlConnection(BaseTest.IDENTITYSERVER_CONNECTIONSTRING);
+            using var connection = new SqlConnection(BaseTest.AUTHSERVER_CONNECTIONSTRING);
 
             void Purge(string table)
             {
@@ -110,32 +110,13 @@ namespace CDR.DataHolder.IntegrationTests.Fixtures
             connection.Open();
 
             if (!onlyPersistedGrants)
-            {
-                Purge("ApiResourceClaims");
-                Purge("ApiResourceProperties");
-                Purge("ApiResources");
-                Purge("ApiResourceScopes");
-                Purge("ApiResourceSecrets");
-                Purge("ApiScopeClaims");
-                Purge("ApiScopeProperties");
-                Purge("ApiScopes");
+            {              
                 Purge("ClientClaims");
-                Purge("ClientCorsOrigins");
-                Purge("ClientGrantTypes");
-                Purge("ClientIdPRestrictions");
-                Purge("ClientPostLogoutRedirectUris");
-                Purge("ClientProperties");
-                Purge("ClientRedirectUris");
                 Purge("Clients");
-                Purge("ClientScopes");
-                Purge("ClientSecrets");
-                Purge("DeviceCodes");
-                Purge("IdentityResourceClaims");
-                Purge("IdentityResourceProperties");
-                Purge("IdentityResources");
             }
 
-            Purge("PersistedGrants");
+            Purge("Grants");
+
         }
 
         // Get SSA from the Register and register it with the DataHolder
@@ -143,7 +124,7 @@ namespace CDR.DataHolder.IntegrationTests.Fixtures
             string brandId = BaseTest.BRANDID,
             string softwareProductId = BaseTest.SOFTWAREPRODUCT_ID,
             string jwtCertificateFilename = BaseTest.JWT_CERTIFICATE_FILENAME,
-            string jwtCertificatePassword = BaseTest.JWT_CERTIFICATE_PASSWORD)        
+            string jwtCertificatePassword = BaseTest.JWT_CERTIFICATE_PASSWORD)
         {
             // Get SSA from Register
             var ssa = await Register_SSA_API.GetSSA_MultiIndustry(brandId, softwareProductId, 
@@ -151,15 +132,14 @@ namespace CDR.DataHolder.IntegrationTests.Fixtures
                 jwtCertificatePassword: jwtCertificatePassword);
 
             // Register software product with DataHolder
-            var registrationRequest = DataHolder_Register_API.CreateRegistrationRequest(ssa, 
-                jwtCertificateFilename: jwtCertificateFilename, 
+            var registrationRequest = DataHolder_Register_API.CreateRegistrationRequest(ssa,
+                jwtCertificateFilename: jwtCertificateFilename,
                 jwtCertificatePassword: jwtCertificatePassword);
 
-            // var response = await US15221_US12969_US15586_MDH_InfosecProfileAPI_Registration_Base.RegisterSoftwareProduct(registrationRequest);
             var response = await DataHolder_Register_API.RegisterSoftwareProduct(registrationRequest);
             if (response.StatusCode != HttpStatusCode.Created)
             {
-                throw new Exception($"Unable to register software product - { softwareProductId }");
+                throw new Exception($"Unable to register software product - { softwareProductId } - {response.StatusCode} - {await response.Content.ReadAsStringAsync()}");
             }
 
             var registration = await response.Content.ReadAsStringAsync();

@@ -339,4 +339,7 @@ ASALocalRun/
 .sonar/
 .scannerwork/
 .sonarqube
+
 /Source/CDR.DataHolder.Manage.API/_healthcheck_ready
+
+Source/cdr-auth-server
