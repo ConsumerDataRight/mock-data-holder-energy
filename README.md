@@ -40,7 +40,7 @@ To get help on launching and debugging the solution, see the [help guide](https:
 
 **Note**: Starting from version 1.2.0, the Mock Data Holder Energy now utilises the [Authorisation Server](https://github.com/ConsumerDataRight/authorisation-server)  as an Identity Provider. The [Authorisation Server](https://github.com/ConsumerDataRight/authorisation-server) also needs to be running when running the Mock Data Holder Energy. The [Authorisation Server](https://github.com/ConsumerDataRight/authorisation-server) repository can be cloned using following command.
 ```
-git clone https://github.com/ConsumerDataRight/authorisation-server.git
+git clone https://github.com/ConsumerDataRight/authorisation-server.git ./cdr-auth-server
 ```
 
 If you would like to contribute features or fixes back to the Mock Data Holder Energy repository, consult the [contributing guidelines](https://github.com/ConsumerDataRight/mock-data-holder-energy/blob/main/CONTRIBUTING.md).
