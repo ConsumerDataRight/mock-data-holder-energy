@@ -671,7 +671,7 @@ namespace CDR.DataHolder.IntegrationTests
                 "DateTime.Now.RFC1123+1" => DateTime.Now.AddDays(1).ToUniversalTime().ToString("r"),
                 "foo" => XFapiAuthDate,
                 null => XFapiAuthDate,
-                _ => throw new ArgumentOutOfRangeException(nameof(XFapiAuthDate))
+                _ => XFapiAuthDate
             };
         }
 

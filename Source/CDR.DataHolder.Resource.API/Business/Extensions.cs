@@ -18,7 +18,7 @@ namespace CDR.DataHolder.Resource.API.Business
 			return url.Replace("https://", "").Replace("http://", "").Split('/')[0];
 		}
 
-		public static Links GetLinks(this ControllerBase controller, string routeName, IConfiguration configuration, int? currentPage = null, int totalPages = 0, int? pageSize = null)
+		public static Links GetLinks(this ControllerBase controller, IConfiguration configuration, int? currentPage = null, int totalPages = 0, int? pageSize = null)
 		{
 			var resourceBaseUri = configuration.GetValue<string>("ResourceBaseUri");
 			var currentUrl = controller.Request.GetDisplayUrl();

@@ -50,6 +50,11 @@ namespace CDR.DataHolder.IntegrationTests.Infrastructure
         public string? XV { get; init; }
 
         /// <summary>
+        /// The x-min-v header.
+        /// If null then no x-min-v header will be set.
+        /// </summary>
+        public string? XMinV { get; init; }
+        /// <summary>
         /// The If-None-Match header (an ETag).
         /// If null then no If-None-Match header will be set.
         /// </summary>
@@ -110,6 +115,12 @@ namespace CDR.DataHolder.IntegrationTests.Infrastructure
                 if (XV != null)
                 {
                     request.Headers.Add("x-v", XV);
+                }
+
+                // Set x-min-v header if provided
+                if (XMinV != null)
+                {
+                    request.Headers.Add("x-min-v", XMinV);
                 }
 
                 // Set If-None-Match header if provided

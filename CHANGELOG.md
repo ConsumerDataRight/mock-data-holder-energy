@@ -5,8 +5,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-### Changed
-- Updated Authorisation Server git clone command in readme
+
+## [1.3.0] - 2023-03-28
+### Added
+- Get Energy Accounts v2 API
+
+### Fixed
+- x-min-v and x-v  check in API version selector
+
 
 ## [1.2.0] - 2023-03-21
 ### Added

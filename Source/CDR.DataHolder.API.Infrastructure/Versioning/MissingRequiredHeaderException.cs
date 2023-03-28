@@ -4,18 +4,18 @@ using System.Runtime.Serialization;
 namespace CDR.DataHolder.API.Infrastructure.Versioning
 {
     [Serializable]
-    public class InvalidVersionException : Exception
+    public class MissingRequiredHeaderException : Exception
     {
         public string HeaderName { get; set; }
 
-        public InvalidVersionException() : base() { }
+        public MissingRequiredHeaderException() : base() { }
 
-        public InvalidVersionException(string headerName) : base()
+        public MissingRequiredHeaderException(string headerName) : base()
         {
             this.HeaderName = headerName;
         }
 
-        protected InvalidVersionException(SerializationInfo info, StreamingContext context) : base(info, context)
+        protected MissingRequiredHeaderException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
 
@@ -23,6 +23,5 @@ namespace CDR.DataHolder.API.Infrastructure.Versioning
         {
             base.GetObjectData(info, context);
         }
-
     }
 }

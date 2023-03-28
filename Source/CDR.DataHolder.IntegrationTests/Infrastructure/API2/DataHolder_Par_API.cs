@@ -36,6 +36,7 @@ namespace CDR.DataHolder.IntegrationTests.Infrastructure.API2
              string? redirectUri = BaseTest.SOFTWAREPRODUCT_REDIRECT_URI_FOR_INTEGRATION_TESTS,
              string? clientAssertion = null,
 
+             //  string? codeVerifier = null,  // PKCE will be mandatory in FAPI 1.0 phase 2
              string? codeVerifier = BaseTest.FAPI_PHASE2_CODEVERIFIER,
              string? codeChallengeMethod = BaseTest.FAPI_PHASE2_CODECHALLENGEMETHOD,
 

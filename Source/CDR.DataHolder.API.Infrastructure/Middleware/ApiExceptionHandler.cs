@@ -39,11 +39,17 @@ namespace CDR.DataHolder.API.Infrastructure.Middleware
                     statusCode = (int)HttpStatusCode.BadRequest;
                     handledError = JsonConvert.SerializeObject(new ResponseErrorList(Error.InvalidXVVersion()), jsonSerializerSettings);
                 }
-
+                
                 if (ex is UnsupportedVersionException exception)
                 {
                     statusCode = (int)HttpStatusCode.NotAcceptable;
                     handledError = JsonConvert.SerializeObject(new ResponseErrorList(Error.UnsupportedVersion(exception.MinVersion, exception.MaxVersion)), jsonSerializerSettings);
+                }
+
+                if (ex is MissingRequiredHeaderException)
+                {
+                    statusCode = (int)HttpStatusCode.BadRequest;
+                    handledError = JsonConvert.SerializeObject(new ResponseErrorList(Error.MissingRequiredHeader()), jsonSerializerSettings);
                 }
 
                 if (!string.IsNullOrEmpty(handledError))

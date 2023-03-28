@@ -79,9 +79,12 @@ namespace CDR.DataHolder.IntegrationTests.Infrastructure.API2
         {
             var clientId = IntegrationTests.BaseTest.GetClientId(IntegrationTests.BaseTest.SOFTWAREPRODUCT_ID);
 
+            // var requestUri = await IntegrationTests.BaseTest.PAR_GetRequestUri(clientId: clientId, responseMode: responseMode);
+
             var queryString = new Dictionary<string, string?>
             {
                 { "request_uri", RequestUri },
+                // { "request_uri", requestUri },
                 { "response_type", responseType },
                 { "response_mode", responseMode },
                 { "client_id", clientId },
@@ -142,7 +145,6 @@ namespace CDR.DataHolder.IntegrationTests.Infrastructure.API2
 
                 // Select accounts
                 await page.WaitForURLAsync($"{authRedirectLeftPart}/select-accounts");
-
                 if (SelectedAccountDisplayNames != null)
                 {
                     foreach (string displayName in SelectedAccountDisplayNames)
