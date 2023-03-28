@@ -265,7 +265,7 @@ steps:
   condition: always()
   inputs:
     command: login
-    containerRegistry: acrcdrsandboxdev
+    containerRegistry: <<yourContainerRegistryName>>
 
 # Run trx formatter to output .MD and .CSV
 - script: |
@@ -394,7 +394,7 @@ steps:
 - task: Docker@2
   displayName: 'Re-Tag Mock Data Holder Energy image with :branch-name'
   inputs:
-    containerRegistry: acrcdrsandboxdev
+    containerRegistry: <<yourContainerRegistryName>>
     repository: 'mock-data-holder-energy'
     command: tag
     arguments: 'mock-data-holder-energy <<yourContainerRegistryName>>.io/mock-data-holder-energy:$(Build.SourceBranchName)'
@@ -403,7 +403,7 @@ steps:
   displayName: 'Re-Tag Mock Data Holder Energy image with :latest (for develop branch only)'
   condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/develop'))
   inputs:
-    containerRegistry: acrcdrsandboxdev
+    containerRegistry: <<yourContainerRegistryName>>
     repository: 'mock-data-holder-energy'
     command: tag
     arguments: 'mock-data-holder-energy <<yourContainerRegistryName>>.io/mock-data-holder-energy:latest'
@@ -424,7 +424,7 @@ steps:
 - task: Docker@2
   displayName: 'Re-Tag Mock Data Holder Energy image with :branch-name'
   inputs:
-    containerRegistry: acrcdrsandboxdev
+    containerRegistry: <<yourContainerRegistryName>>
     repository: 'mock-data-holder-energy'
     command: tag
     arguments: 'mock-data-holder-energy <<yourContainerRegistryName>>.io/mock-data-holder-energy:$(Build.SourceBranchName)'
@@ -433,7 +433,7 @@ steps:
   displayName: 'Re-Tag Mock Data Holder Energy image with :latest (for develop branch only)'
   condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/develop'))
   inputs:
-    containerRegistry: acrcdrsandboxdev
+    containerRegistry: <<yourContainerRegistryName>>
     repository: 'mock-data-holder-energy'
     command: tag
     arguments: 'mock-data-holder-energy <<yourContainerRegistryName>>.io/mock-data-holder-energy:latest'
