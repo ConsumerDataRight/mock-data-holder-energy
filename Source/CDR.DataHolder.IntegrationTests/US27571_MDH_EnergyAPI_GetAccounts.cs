@@ -607,7 +607,6 @@ namespace CDR.DataHolder.IntegrationTests
             var accessToken = await Fixture.DataHolder_AccessToken_Cache.GetAccessToken(TokenType.MARY_MOSS);
 
             // Act
-            //var response = await GetAccounts(accessToken, $"{DH_MTLS_GATEWAY_URL}/cds-au/v1/energy/accounts");
             var api = new Infrastructure.API
             {
                 CertificateFilename = CERTIFICATE_FILENAME,
@@ -641,7 +640,6 @@ namespace CDR.DataHolder.IntegrationTests
             var accessToken = await Fixture.DataHolder_AccessToken_Cache.GetAccessToken(TokenType.MARY_MOSS);
 
             // Act
-            //var response = await GetAccounts(accessToken, ENERGY_GET_ACCOUNTS_BASE_URL);
             var api = new Infrastructure.API
             {
                 CertificateFilename = certificateFilename,
