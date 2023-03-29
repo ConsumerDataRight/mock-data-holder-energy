@@ -110,7 +110,7 @@ namespace CDR.DataHolder.IntegrationTests.Fixtures
             connection.Open();
 
             if (!onlyPersistedGrants)
-            {              
+            {
                 Purge("ClientClaims");
                 Purge("Clients");
             }

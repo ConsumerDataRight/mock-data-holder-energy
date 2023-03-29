@@ -48,7 +48,7 @@ namespace CDR.DataHolder.API.Infrastructure.Models
 
         public static Error PageSizeTooLarge()
         {
-            return new Error("urn:au-cds:error:cds-all:Field/InvalidPageSize", "Invalid Page Size", "page-size pagination field is greater than the maximum allowed");
+            return new Error("urn:au-cds:error:cds-all:Field/InvalidPageSize", "Invalid Page Size", "page-size pagination field is greater than the maximum 1000 allowed");
         }
 
 
@@ -175,6 +175,17 @@ namespace CDR.DataHolder.API.Infrastructure.Models
             };
         }
 
+        public static Error MissingRequiredHeader(string headerName = null)
+        {
+            return new Error()
+            {
+                Code = "urn:au-cds:error:cds-all:Header/Missing",
+                Title = "Missing Required Header",
+                Detail = "An API version X-V Header is required but was not specified",
+                Meta = new object()
+            };
+        }
+
         public static Error InvalidHeader(string headerName = null)
         {
             return new Error()
@@ -192,8 +203,8 @@ namespace CDR.DataHolder.API.Infrastructure.Models
             return new Error()
             {
                 Code = "urn:au-cds:error:cds-all:Header/UnsupportedVersion",
-                Title = "Unsupported Version",
-                Detail = (minVersion.HasValue && maxVersion.HasValue) ? $"The minimum supported version is {minVersion}. The maximum supported version is {maxVersion}." : "",
+                Title = "Unsupported Version",                
+                Detail = (minVersion.HasValue && maxVersion.HasValue) ? "Version Requested is lower than the minimum version or greater than maximum version" : "",
                 Meta = new object()
             };
         }
@@ -204,7 +215,7 @@ namespace CDR.DataHolder.API.Infrastructure.Models
             {
                 Code = "urn:au-cds:error:cds-all:Header/InvalidVersion",
                 Title = "Invalid Version",
-                Detail = "Version header must be a positive integer",
+                Detail = "Version header must be a positive integer between 1 and 1000",
                 Meta = new object()
             };
         }

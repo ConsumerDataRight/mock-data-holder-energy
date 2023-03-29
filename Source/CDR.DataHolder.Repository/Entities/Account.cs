@@ -18,7 +18,10 @@ namespace CDR.DataHolder.Repository.Entities
 		[Required]
 		public DateTime CreationDate { get; set; }
 
-		public Guid CustomerId { get; set; }
+        [MaxLength(100)]
+        public string OpenStatus { get; set; }
+
+        public Guid CustomerId { get; set; }
 		public virtual Customer Customer { get; set; }
 		public virtual ICollection<AccountPlan> AccountPlans { get; set; }
 		public virtual ICollection<AccountConcession> AccountConcessions { get; set; }

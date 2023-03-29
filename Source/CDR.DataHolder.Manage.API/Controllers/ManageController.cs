@@ -12,14 +12,14 @@ namespace CDR.DataHolder.Manage.API.Controllers
     [ApiController]
     [Route("[controller]")]
     public class ManageController : ControllerBase
-    {        
-        private readonly ILogger<ManageController> _logger;        
+    {
+        private readonly ILogger<ManageController> _logger;
         private readonly DataHolderDatabaseContext _dbContext;
 
         public ManageController(ILogger<ManageController> logger,
                                 DataHolderDatabaseContext dbContext)
-        {            
-            _logger = logger;            
+        {
+            _logger = logger;
             _dbContext = dbContext;
         }
 
