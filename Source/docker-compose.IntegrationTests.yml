@@ -51,7 +51,6 @@ services:
       - ASPNETCORE_ENVIRONMENT=Release
       # tests need expiry of 3600
       - CdrAuthServer__AccessTokenExpirySeconds=3600
-      # FIXME - MJS - is encryption ready?
       - CdrAuthServer__SupportJarmEncryption=false
     # NOTE - commented out volumes below as volume is mounted as 1001:121 (vsts:docker) in build pipeline and causes issue with chown in dockerfile (appuser:appgroup), ie stops container from starting because of different user
     # volumes:

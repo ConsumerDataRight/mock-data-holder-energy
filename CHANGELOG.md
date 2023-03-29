@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Get Energy Accounts v2 API
 
+### Changed
+- Updated Authorisation Server git clone command in readme
+
 ### Fixed
 - x-min-v and x-v  check in API version selector
 
