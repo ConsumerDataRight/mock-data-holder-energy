@@ -44,17 +44,27 @@ namespace CDR.DataHolder.Resource.API.Business
 			CreateMap<Domain.Entities.EnergyPlanOverview, Models.EnergyPlanOverview>()
 				.ReverseMap();
 
-			CreateMap<Domain.Entities.EnergyAccount, Models.EnergyAccount>()
-				.ForMember(dest => dest.CreationDate, source => source.MapFrom(source => source.CreationDate.ToString("yyyy-MM-dd")))
-				.ForMember(dest => dest.Plans, source => source.MapFrom(source => source.Plans))
-				.ReverseMap();
-
-			CreateMap<Page<Domain.Entities.EnergyAccount[]>, EnergyAccountListResponse>()
+            CreateMap<Domain.Entities.EnergyAccount, BaseEnergyAccount>()
+                .ForMember(dest => dest.CreationDate, source => source.MapFrom(source => source.CreationDate.ToString("yyyy-MM-dd")))
+                .ForMember(dest => dest.Plans, source => source.MapFrom(source => source.Plans))
+                .ReverseMap();
+            CreateMap<Domain.Entities.EnergyAccount, Models.EnergyAccount>()
+                .IncludeBase<Domain.Entities.EnergyAccount, BaseEnergyAccount>()
+                .ReverseMap();
+            CreateMap<Domain.Entities.EnergyAccount, EnergyAccountV2>()
+				.IncludeBase<Domain.Entities.EnergyAccount, BaseEnergyAccount>()
+                .ForMember(dest => dest.OpenStatus, source => source.MapFrom(source => source.OpenStatus))
+                .ReverseMap();
+            CreateMap<Page<Domain.Entities.EnergyAccount[]>, EnergyAccountListResponse<Models.EnergyAccount>>()
 				.ForPath(dest => dest.Data.Accounts, source => source.MapFrom(source => source.Data))
 				.ForMember(dest => dest.Meta, source => source.MapFrom(source => source))
 				.ReverseMap();
+            CreateMap<Page<Domain.Entities.EnergyAccount[]>, EnergyAccountListResponse<Models.EnergyAccountV2>>()
+                .ForPath(dest => dest.Data.Accounts, source => source.MapFrom(source => source.Data))
+                .ForMember(dest => dest.Meta, source => source.MapFrom(source => source))
+                .ReverseMap();
 
-			CreateMap<EnergyAccountConcession[], EnergyConcessionsResponse>()
+            CreateMap<EnergyAccountConcession[], EnergyConcessionsResponse>()
 				.ForPath(dest => dest.Data.Concessions, source => source.MapFrom(source => source));
 			CreateMap<EnergyAccountConcession, EnergyConcession>()
 				.ReverseMap();

@@ -4,8 +4,6 @@ using Microsoft.AspNetCore.Mvc.Versioning;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using static CDR.DataHolder.API.Infrastructure.Constants;
 
 namespace CDR.DataHolder.API.Infrastructure.Versioning
@@ -14,8 +12,10 @@ namespace CDR.DataHolder.API.Infrastructure.Versioning
     {
         private readonly Dictionary<string, int[]> _supportedApiVersions = new Dictionary<string, int[]> {
             { @"\/cds-au\/v1\/admin\/metrics", new int[] { 3 } },
-        };
-
+            { @"\/cds-au\/v1\/common\/customer", new int[] { 1 } },            
+            { @"\/cds-au\/v1\/energy\/accounts", new int[] { 1, 2 } },
+            { @"\/cds-au\/v1\/energy\/accounts\/[A-Za-z0-9\-]*\/concessions", new int[] { 1 } },
+        };        
         private readonly ApiVersion _defaultVersion;
 
         public ApiVersionSelector(ApiVersioningOptions options)
@@ -25,10 +25,11 @@ namespace CDR.DataHolder.API.Infrastructure.Versioning
 
         public ApiVersion SelectVersion(HttpRequest request, ApiVersionModel model)
         {
-            // Try and get x-v value from request header
-            if (!request.Headers.TryGetValue(CustomHeaders.ApiVersionHeaderKey, out var x_v) || string.IsNullOrEmpty(x_v))
+            // Try and get x-v value from request header            
+            if (!request.Headers.TryGetValue(CustomHeaders.ApiVersionHeaderKey, out var x_v))
             {
-                return _defaultVersion;
+                // Raise an error                
+                throw new MissingRequiredHeaderException(CustomHeaders.ApiVersionHeaderKey);
             }
 
             // x-v must be a positive integer.
@@ -58,17 +59,18 @@ namespace CDR.DataHolder.API.Infrastructure.Versioning
             {
                 return new ApiVersion(xvVersion, 0);
             }
-
+            
             // No matching version, so check if a x-min-v header has been provided.
             if (!request.Headers.ContainsKey(CustomHeaders.ApiMinVersionHeaderKey))
             {
+                // For not supported higher version of x-v; without x-min-v below exception is thrown
                 // x-min-v has not been provided, so throw an unsupported version error.
-                throw new UnsupportedVersionException(apiVersions.Min(), apiVersions.Max());
+                throw new UnsupportedVersionException(apiVersions.Min(), apiVersions.Max());                
             }
 
             // Check if the x-min-v is a positive integer.
             var x_min_v = request.Headers[CustomHeaders.ApiMinVersionHeaderKey];
-
+            
             // x-min-v must be a positive integer.
             if (!int.TryParse(x_min_v, out int xvMinVersion) || xvMinVersion < 1)
             {

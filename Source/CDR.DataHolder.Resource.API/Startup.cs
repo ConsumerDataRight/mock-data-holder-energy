@@ -4,6 +4,7 @@ using CDR.DataHolder.API.Infrastructure.Filters;
 using CDR.DataHolder.API.Infrastructure.IdPermanence;
 using CDR.DataHolder.API.Infrastructure.Middleware;
 using CDR.DataHolder.API.Infrastructure.Models;
+using CDR.DataHolder.API.Infrastructure.Versioning;
 using CDR.DataHolder.API.Logger;
 using CDR.DataHolder.Domain.Repositories;
 using CDR.DataHolder.Repository;
@@ -71,8 +72,8 @@ namespace CDR.DataHolder.Resource.API
             services.AddApiVersioning(options =>
             {
                 options.DefaultApiVersion = new ApiVersion(1, 0);
-                options.AssumeDefaultVersionWhenUnspecified = false;
-                options.ApiVersionReader = new HeaderApiVersionReader("x-v");
+                options.AssumeDefaultVersionWhenUnspecified = true;                
+                options.ApiVersionSelector = new ApiVersionSelector(options);
                 options.ErrorResponses = new ErrorResponseVersion();
             });
 
@@ -181,8 +182,8 @@ namespace CDR.DataHolder.Resource.API
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILogger<Startup> logger)
-        {
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        {            
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -193,6 +194,11 @@ namespace CDR.DataHolder.Resource.API
 
             // ExceptionHandlingMiddleware must be first in the line, so it will catch all unhandled exceptions.
             app.UseMiddleware<ResourceAuthoriseErrorHandlingMiddleware>();
+            
+            app.UseExceptionHandler(exceptionHandlerApp =>
+            {
+                exceptionHandlerApp.Run(async context => await ApiExceptionHandler.Handle(context));
+            });
 
             app.UseSwagger();
             app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Mock Data Holder Discovery API v1"));

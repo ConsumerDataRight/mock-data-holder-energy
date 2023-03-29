@@ -27,23 +27,20 @@ namespace CDR.DataHolder.Resource.API.Controllers
 	[Authorize]
 	public class ResourceController : ControllerBase
 	{
-		private readonly IResourceRepository _resourceRepository;
-		private readonly IStatusRepository _statusRepository;
+		private readonly IResourceRepository _resourceRepository;		
 		private readonly IConfiguration _config;
 		private readonly IMapper _mapper;
 		private readonly ILogger<ResourceController> _logger;
 		private readonly IIdPermanenceManager _idPermanenceManager;
 
 		public ResourceController(
-			IResourceRepository resourceRepository,
-			IStatusRepository statusRepository,
+			IResourceRepository resourceRepository,			
 			IConfiguration config,
 			IMapper mapper,
 			ILogger<ResourceController> logger,
 			IIdPermanenceManager idPermanenceManager)
 		{
-			_resourceRepository = resourceRepository;
-			_statusRepository = statusRepository;
+			_resourceRepository = resourceRepository;			
 			_config = config;
 			_mapper = mapper;
 			_logger = logger;
@@ -76,23 +73,32 @@ namespace CDR.DataHolder.Resource.API.Controllers
 				return BadRequest();
 			}
 
-			response.Links = this.GetLinks(nameof(GetCustomer), _config);
+			response.Links = this.GetLinks(_config);
 
 			return Ok(response);
 		}
 
 		[PolicyAuthorize(AuthorisationPolicy.GetAccountsApi)]
-		[HttpGet("v1/energy/accounts", Name = nameof(GetEnergyAccounts))]
+		[HttpGet("v1/energy/accounts", Name = nameof(GetEnergyAccountsXV1))]
 		[CheckScope(CDR.DataHolder.API.Infrastructure.Constants.ApiScopes.Energy.AccountsBasicRead)]
 		[CheckXV(1, 1)]
 		[CheckAuthDate]
 		[ApiVersion("1")]
 		[ServiceFilter(typeof(LogActionEntryAttribute))]
-		public async Task<IActionResult> GetEnergyAccounts(
+		public async Task<IActionResult> GetEnergyAccountsXV1(
 			[FromQuery(Name = "page"), CheckPage] string page,
 			[FromQuery(Name = "page-size"), CheckPageSize] string pageSize)
 		{
+			// Create the filter
+			var accountIds = GetAccountIds(User);
+			var accountFilter = new EnergyAccountFilter(accountIds);
 
+			return await GetPagedEnergyAccountsForFilter<EnergyAccount>(page, pageSize, accountFilter);
+		}
+
+		private async Task<IActionResult> GetPagedEnergyAccountsForFilter<T>
+			(string page, string pageSize, EnergyAccountFilter accountFilter) where T: BaseEnergyAccount
+        {
             // Each customer id is different for each ADR based on PPID.
             // Therefore we need to look up the CustomerClient table to find the actual customer id.
             // This can be done once we have a client id (Registration) and a valid access token.
@@ -102,37 +108,56 @@ namespace CDR.DataHolder.Resource.API.Controllers
                 return new BadRequestObjectResult(new ResponseErrorList(Error.UnknownError()));
             }
 
-			// Get energy accounts
-			var accountIds = GetAccountIds(User);
-			var accountFilter = new EnergyAccountFilter(accountIds);
-			int pageNumber = string.IsNullOrEmpty(page) ? 1 : int.Parse(page);
-			int pageSizeNumber = string.IsNullOrEmpty(pageSize) ? 25 : int.Parse(pageSize);
-			var accounts = await _resourceRepository.GetAllEnergyAccounts(accountFilter, pageNumber, pageSizeNumber);
-			var response = _mapper.Map<EnergyAccountListResponse>(accounts);
+            int pageNumber = string.IsNullOrEmpty(page) ? 1 : int.Parse(page);
+            int pageSizeNumber = string.IsNullOrEmpty(pageSize) ? 25 : int.Parse(pageSize);
+            var accounts = await _resourceRepository.GetAllEnergyAccounts(accountFilter, pageNumber, pageSizeNumber);
+            var response = _mapper.Map<EnergyAccountListResponse<T>>(accounts);
 
-			// Check if the given page number is out of range
-			var totalPages = response.Meta.TotalPages.GetValueOrDefault();
-			if (pageNumber != 1 && pageNumber > totalPages)
-			{
-				return new UnprocessableEntityObjectResult(new ResponseErrorList(Error.PageOutOfRange(totalPages)));
-			}
+            // Check if the given page number is out of range
+            var totalPages = response.Meta.TotalPages.GetValueOrDefault();
+            if (pageNumber != 1 && pageNumber > totalPages)
+            {
+                return new UnprocessableEntityObjectResult(new ResponseErrorList(Error.PageOutOfRange(totalPages)));
+            }
 
-			var softwareProductId = this.User.FindFirst(Constants.TokenClaimTypes.SoftwareId)?.Value;
-			var idParameters = new IdPermanenceParameters
+            var softwareProductId = this.User.FindFirst(Constants.TokenClaimTypes.SoftwareId)?.Value;
+            var idParameters = new IdPermanenceParameters
+            {
+                SoftwareProductId = softwareProductId,
+                CustomerId = loginId
+            };
+
+            _idPermanenceManager.EncryptIds(response.Data.Accounts, idParameters, a => a.AccountId);
+
+            // Set pagination meta data
+            response.Links = this.GetLinks(_config, pageNumber, response.Meta.TotalPages.GetValueOrDefault(), pageSizeNumber);
+
+            return Ok(response);
+        }
+
+		[PolicyAuthorize(AuthorisationPolicy.GetAccountsApi)]
+		[HttpGet("v1/energy/accounts", Name = nameof(GetEnergyAccountsXV2))]
+		[CheckScope(CDR.DataHolder.API.Infrastructure.Constants.ApiScopes.Energy.AccountsBasicRead)]
+		[CheckXV(2, 2)]
+		[CheckAuthDate]
+		[ApiVersion("2")]
+		[ServiceFilter(typeof(LogActionEntryAttribute))]
+		public async Task<IActionResult> GetEnergyAccountsXV2(
+			[FromQuery(Name = "open-status"), CheckOpenStatus] string openStatus,
+			[FromQuery(Name = "page"), CheckPage] string page,
+			[FromQuery(Name = "page-size"), CheckPageSize] string pageSize)
+		{
+            // Create the filter
+            var accountIds = GetAccountIds(User);
+            var accountFilter = new EnergyAccountFilter(accountIds)
 			{
-				SoftwareProductId = softwareProductId,
-				CustomerId = loginId
+				OpenStatus = (openStatus != null && openStatus.Equals(OpenStatus.All.ToString(), StringComparison.OrdinalIgnoreCase)) ? null : openStatus
 			};
 
-			_idPermanenceManager.EncryptIds(response.Data.Accounts, idParameters, a => a.AccountId);
+			return await GetPagedEnergyAccountsForFilter<EnergyAccountV2>(page, pageSize, accountFilter);
+        }
 
-			// Set pagination meta data
-			response.Links = this.GetLinks(nameof(GetEnergyAccounts), _config, pageNumber, response.Meta.TotalPages.GetValueOrDefault(), pageSizeNumber);
-
-			return Ok(response);
-		}
-
-		[PolicyAuthorize(AuthorisationPolicy.GetConsessionsApi)]
+        [PolicyAuthorize(AuthorisationPolicy.GetConsessionsApi)]
 		[HttpGet("v1/energy/accounts/{accountId}/concessions", Name = nameof(GetConsessions))]
 		[CheckScope(CDR.DataHolder.API.Infrastructure.Constants.ApiScopes.Energy.ConcessionsRead)]
 		[CheckXV(1, 1)]
@@ -209,7 +234,7 @@ namespace CDR.DataHolder.Resource.API.Controllers
 			var response = _mapper.Map<EnergyConcessionsResponse>(consessions);
 
 			// Set pagination meta data
-			response.Links = this.GetLinks(nameof(GetConsessions), _config);
+			response.Links = this.GetLinks( _config);
 
 			return Ok(response);
 		}

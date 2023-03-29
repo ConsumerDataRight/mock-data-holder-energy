@@ -94,8 +94,14 @@ namespace CDR.DataHolder.Repository
 				.Where(account =>
 					filter.AllowedAccountIds.Contains(account.AccountId));
 
-			// Apply ordering and pagination
-			var totalRecords = await accountsQuery.CountAsync();
+            // Apply open status filter.
+            if (!string.IsNullOrEmpty(filter.OpenStatus))
+            {
+                accountsQuery = accountsQuery.Where(account => account.OpenStatus == filter.OpenStatus);
+            }
+
+            // Apply ordering and pagination
+            var totalRecords = await accountsQuery.CountAsync();
 			accountsQuery = accountsQuery
 				.OrderBy(account => account.DisplayName).ThenBy(account => account.AccountId)
 				.Skip((page - 1) * pageSize)

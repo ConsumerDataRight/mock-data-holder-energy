@@ -1,6 +1,6 @@
 ![Consumer Data Right Logo](https://raw.githubusercontent.com/ConsumerDataRight/mock-data-holder-energy/main/cdr-logo.png) 
 
-[![Consumer Data Standards v1.22.0](https://img.shields.io/badge/Consumer%20Data%20Standards-v1.22.0-blue.svg)](https://consumerdatastandardsaustralia.github.io/standards-archives/standards-1.22.0/#introduction)
+[![Consumer Data Standards v1.22.1](https://img.shields.io/badge/Consumer%20Data%20Standards-v1.22.1-blue.svg)](https://consumerdatastandardsaustralia.github.io/standards-archives/standards-1.22.1/#introduction)
 [![Conformance Test Suite 4.0](https://img.shields.io/badge/Conformance%20Test%20Suite-v4.0-darkblue.svg)](https://www.cdr.gov.au/for-providers/conformance-test-suite-data-holders)
 [![FAPI 1.0 Advanced Profile](https://img.shields.io/badge/FAPI%201.0-orange.svg)](https://openid.net/specs/openid-financial-api-part-2-1_0.html)
 [![made-with-dotnet](https://img.shields.io/badge/Made%20with-.NET-1f425Ff.svg)](https://dotnet.microsoft.com/)
@@ -15,7 +15,7 @@ This repository contains a mock implementation of a Data Holder in the Energy se
 
 ## Mock Data Holder Energy - Alignment
 The Mock Data Holder Energy:
-* aligns to [v1.22.0](https://consumerdatastandardsaustralia.github.io/standards-archives/standards-1.22.0/#introduction) of the [Consumer Data Standards](https://consumerdatastandardsaustralia.github.io/standards-archives/standards-1.22.0/#introduction) in particular [FAPI 1.0 Migration Phase 3](https://consumerdatastandardsaustralia.github.io/standards-archives/standards-1.22.0/#introduction) with backwards compatibility to Migration Phase 2;
+* aligns to [v1.22.1](https://consumerdatastandardsaustralia.github.io/standards-archives/standards-1.22.1/#introduction) of the [Consumer Data Standards](https://consumerdatastandardsaustralia.github.io/standards-archives/standards-1.22.1/#introduction) in particular [FAPI 1.0 Migration Phase 3](https://consumerdatastandardsaustralia.github.io/standards-archives/standards-1.22.1/#security-profile) with backwards compatibility to Migration Phase 2;
 * has passed v4.0 of the [Conformance Test Suite for Data Holders](https://www.cdr.gov.au/for-providers/conformance-test-suite-data-holders); and
 * is compliant with the [FAPI 1.0 Advanced Profile](https://openid.net/specs/openid-financial-api-part-2-1_0.html).
 

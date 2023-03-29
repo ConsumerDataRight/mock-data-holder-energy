@@ -142,7 +142,6 @@ namespace CDR.DataHolder.IntegrationTests.Infrastructure.API2
 
                 // Select accounts
                 await page.WaitForURLAsync($"{authRedirectLeftPart}/select-accounts");
-
                 if (SelectedAccountDisplayNames != null)
                 {
                     foreach (string displayName in SelectedAccountDisplayNames)

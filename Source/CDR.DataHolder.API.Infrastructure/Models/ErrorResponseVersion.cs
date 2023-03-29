@@ -7,18 +7,19 @@ namespace CDR.DataHolder.API.Infrastructure.Models
     public class ErrorResponseVersion : DefaultErrorResponseProvider
     {
         public override IActionResult CreateResponse(ErrorResponseContext context)
-        {
+        {            
+            // Get x-v from request header
+            var versionHeaderValue = context.Request.Headers["x-v"];
+            
             // The version was not specified.
-            if (context.ErrorCode == "ApiVersionUnspecified")
+            if (string.IsNullOrEmpty(versionHeaderValue))
             {
-                return new ObjectResult(new ResponseErrorList(Error.MissingHeader("x-v")))
+                return new ObjectResult(new ResponseErrorList(Error.MissingRequiredHeader()))
                 {
                     StatusCode = (int)HttpStatusCode.BadRequest
                 };
             }
 
-            // Get x-v from request header
-            var versionHeaderValue = context.Request.Headers["x-v"];
             var invalid_XV_Version = true;
 
             // If the x-v is set, check that it is a postive integer.

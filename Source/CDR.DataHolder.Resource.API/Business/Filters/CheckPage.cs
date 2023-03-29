@@ -15,9 +15,9 @@ namespace CDR.DataHolder.Resource.API.Business.Filters
 				return ValidationResult.Success;
 			}
 
-			if (!int.TryParse(value.ToString(), out int page) || page <= 0)
+			if (!int.TryParse(value.ToString(), out int page) || page <= 0 || page > 1000)
 			{
-				return new ValidationResult(JsonConvert.SerializeObject(Error.InvalidField("page")));
+				return new ValidationResult(JsonConvert.SerializeObject(Error.InvalidField("Page parameter is out of range. Minimum page is 1, maximum page is 1000")));
 			}
 
 			return ValidationResult.Success;

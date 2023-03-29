@@ -265,7 +265,7 @@ namespace CDR.DataHolder.IntegrationTests
                         ""errors"": [{
                             ""code"": ""urn:au-cds:error:cds-all:Header/InvalidVersion"",
                             ""title"": ""Invalid Version"",
-                            ""detail"": ""Version header must be a positive integer"",
+                            ""detail"": ""Version header must be a positive integer between 1 and 1000"",
                             ""meta"": {}
                         }]
                     }";
@@ -312,7 +312,7 @@ namespace CDR.DataHolder.IntegrationTests
                         ""errors"": [{
                             ""code"": ""urn:au-cds:error:cds-all:Header/UnsupportedVersion"",
                             ""title"": ""Unsupported Version"",
-                            ""detail"": """",
+                            ""detail"": ""Version Requested is lower than the minimum version or greater than maximum version"",
                             ""meta"": {}
                         }]
                     }";
