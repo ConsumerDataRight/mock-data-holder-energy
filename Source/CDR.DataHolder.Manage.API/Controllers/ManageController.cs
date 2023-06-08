@@ -43,33 +43,5 @@ namespace CDR.DataHolder.Manage.API.Controllers
 
             return Ok();
         }
-
-        private async Task<string> GetData(string endpoint, int version)
-        {
-            using (LogContext.PushProperty("MethodName", ControllerContext.RouteData.Values["action"].ToString()))
-            {
-                _logger.LogInformation("Retrieving data from {endpoint} (x-v: {version})...", endpoint, version);
-            }
-
-            var httpClient = GetHttpClient();
-            httpClient.DefaultRequestHeaders.Add("x-v", version.ToString());
-            var response = await httpClient.GetAsync(endpoint);
-
-            _logger.LogInformation("Status code: {statusCode}", response.StatusCode);
-
-            if (response.IsSuccessStatusCode)
-            {
-                return await response.Content.ReadAsStringAsync();
-            }
-
-            return null;
-        }
-        
-        private static HttpClient GetHttpClient()
-        {
-            var clientHandler = new HttpClientHandler();
-            clientHandler.ServerCertificateCustomValidationCallback += (sender, cert, chain, sslPolicyErrors) => true;
-            return new HttpClient(clientHandler);
-        }
     }
 }
