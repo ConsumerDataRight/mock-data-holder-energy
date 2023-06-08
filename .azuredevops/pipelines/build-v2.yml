@@ -265,14 +265,14 @@ steps:
   condition: always()
   inputs:
     command: login
-    containerRegistry: <<yourContainerRegistryName>>
+    containerRegistry: acrcdrsandboxdev
 
 # Run trx formatter to output .MD and .CSV
 - script: |
     docker run \
       -v=$(Build.SourcesDirectory)/sb-mock-data-holder-energy/Source/_temp/mock-data-holder-energy-integration-tests/testresults/results.trx:/app/results.trx:ro \
       -v=$(Build.SourcesDirectory)/sb-mock-data-holder-energy/Source/_temp/mock-data-holder-energy-integration-tests/testresults/formatted/:/app/out/:rw \
-      <<yourContainerRegistryName>>.io/trx-formatter -i results.trx -t "MDHE" --outputprefix "MDHE" -o out/
+      acrcdrsandboxdev.azurecr.io/trx-formatter -i results.trx -t "MDHE" --outputprefix "MDHE" -o out/
   displayName: 'Run trx-formatter'  
   condition: always()   
 
@@ -290,7 +290,7 @@ steps:
     docker run \
       -v=$(Build.SourcesDirectory)/sb-mock-data-holder-energy/Source/_temp/mock-data-holder-energy-cdr-auth-server-integration-tests/testresults/results.trx:/app/results.trx:ro \
       -v=$(Build.SourcesDirectory)/sb-mock-data-holder-energy/Source/_temp/mock-data-holder-energy-cdr-auth-server-integration-tests/testresults/formatted/:/app/out/:rw \
-      <<yourContainerRegistryName>>.io/trx-formatter -i results.trx -t "MDHE-CAS" --outputprefix "MDHE-CAS" -o out/
+      acrcdrsandboxdev.azurecr.io/trx-formatter -i results.trx -t "MDHE-CAS" --outputprefix "MDHE-CAS" -o out/
   displayName: 'Run trx-formatter (CAS)'  
   condition: always()   
 
@@ -314,7 +314,7 @@ steps:
 #     docker run \
 #       -v=$(Build.SourcesDirectory)/sb-mock-data-holder-energy/Source/_temp/mock-data-holder-energy-cdr-auth-server-e2e-tests/testresults/results.trx:/app/results.trx:ro \
 #       -v=$(Build.SourcesDirectory)/sb-mock-data-holder-energy/Source/_temp/mock-data-holder-energy-cdr-auth-server-e2e-tests/testresults/formatted/:/app/out/:rw \
-#       <<yourContainerRegistryName>>.io/trx-formatter -i results.trx -t "MDH-CAS-E2E" --outputprefix "MDH-CAS-E2E" -o out/
+#       acrcdrsandboxdev.azurecr.io/trx-formatter -i results.trx -t "MDH-CAS-E2E" --outputprefix "MDH-CAS-E2E" -o out/
 #   displayName: "Run trx-formatter (CAS)"
 #   condition: always()
 
@@ -394,57 +394,57 @@ steps:
 - task: Docker@2
   displayName: 'Re-Tag Mock Data Holder Energy image with :branch-name'
   inputs:
-    containerRegistry: <<yourContainerRegistryName>>
+    containerRegistry: acrcdrsandboxdev
     repository: 'mock-data-holder-energy'
     command: tag
-    arguments: 'mock-data-holder-energy <<yourContainerRegistryName>>.io/mock-data-holder-energy:$(Build.SourceBranchName)'
+    arguments: 'mock-data-holder-energy acrcdrsandboxdev.azurecr.io/mock-data-holder-energy:$(Build.SourceBranchName)'
 
 - task: Docker@2
   displayName: 'Re-Tag Mock Data Holder Energy image with :latest (for develop branch only)'
   condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/develop'))
   inputs:
-    containerRegistry: <<yourContainerRegistryName>>
+    containerRegistry: acrcdrsandboxdev
     repository: 'mock-data-holder-energy'
     command: tag
-    arguments: 'mock-data-holder-energy <<yourContainerRegistryName>>.io/mock-data-holder-energy:latest'
+    arguments: 'mock-data-holder-energy acrcdrsandboxdev.azurecr.io/mock-data-holder-energy:latest'
 
 - task: CmdLine@2
   displayName: 'Push Mock Data Holder Energy image with :branch-name tag to ACR'
   inputs:
-    script: 'docker push <<yourContainerRegistryName>>.io/mock-data-holder-energy:$(Build.SourceBranchName)' 
+    script: 'docker push acrcdrsandboxdev.azurecr.io/mock-data-holder-energy:$(Build.SourceBranchName)' 
 
 - task: CmdLine@2
   displayName: 'Push Mock Data Holder Energy image with :latest tag to ACR (develop branch only)'
   condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/develop'))
   inputs:
-    script: 'docker push <<yourContainerRegistryName>>.io/mock-data-holder-energy:latest' 
+    script: 'docker push acrcdrsandboxdev.azurecr.io/mock-data-holder-energy:latest' 
 
 # mock-data-holder-energy
 
 - task: Docker@2
   displayName: 'Re-Tag Mock Data Holder Energy image with :branch-name'
   inputs:
-    containerRegistry: <<yourContainerRegistryName>>
+    containerRegistry: acrcdrsandboxdev
     repository: 'mock-data-holder-energy'
     command: tag
-    arguments: 'mock-data-holder-energy <<yourContainerRegistryName>>.io/mock-data-holder-energy:$(Build.SourceBranchName)'
+    arguments: 'mock-data-holder-energy acrcdrsandboxdev.azurecr.io/mock-data-holder-energy:$(Build.SourceBranchName)'
 
 - task: Docker@2
   displayName: 'Re-Tag Mock Data Holder Energy image with :latest (for develop branch only)'
   condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/develop'))
   inputs:
-    containerRegistry: <<yourContainerRegistryName>>
+    containerRegistry: acrcdrsandboxdev
     repository: 'mock-data-holder-energy'
     command: tag
-    arguments: 'mock-data-holder-energy <<yourContainerRegistryName>>.io/mock-data-holder-energy:latest'
+    arguments: 'mock-data-holder-energy acrcdrsandboxdev.azurecr.io/mock-data-holder-energy:latest'
 
 - task: CmdLine@2
   displayName: 'Push Mock Data Holder Energy image with :branch-name tag to ACR'
   inputs:
-    script: 'docker push <<yourContainerRegistryName>>.io/mock-data-holder-energy:$(Build.SourceBranchName)' 
+    script: 'docker push acrcdrsandboxdev.azurecr.io/mock-data-holder-energy:$(Build.SourceBranchName)' 
 
 - task: CmdLine@2
   displayName: 'Push Mock Data Holder Energy image with :latest tag to ACR (develop branch only)'
   condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/develop'))
   inputs:
-    script: 'docker push <<yourContainerRegistryName>>.io/mock-data-holder-energy:latest' 
+    script: 'docker push acrcdrsandboxdev.azurecr.io/mock-data-holder-energy:latest' 
