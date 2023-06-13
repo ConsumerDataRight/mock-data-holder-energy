@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.1] - 2023-06-07
+### Changed
+- Rebuilt to include v1.0.1 of the [Authorisation Server](https://github.com/ConsumerDataRight/authorisation-server)
+
 ## [1.3.0] - 2023-03-28
 ### Added
 - Get Energy Accounts v2 API

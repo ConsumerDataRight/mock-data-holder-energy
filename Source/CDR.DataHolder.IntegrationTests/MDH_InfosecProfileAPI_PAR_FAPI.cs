@@ -275,7 +275,7 @@ namespace CDR.DataHolder.IntegrationTests
                 response?.RequestMessage?.RequestUri?.PathAndQuery.Should().StartWith("/connect/authorize");
 
                 var expectedErrorResponse = "ERR-AUTH-008: request_uri is missing";
-                var actualResponseContent = await response?.Content?.ReadAsStringAsync();
+                var actualResponseContent = response?.Content != null ? await response.Content.ReadAsStringAsync() : null;
                 actualResponseContent.Should().Contain(expectedErrorResponse);
             }
         }
