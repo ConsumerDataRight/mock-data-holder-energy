@@ -1,12 +1,15 @@
 ![Consumer Data Right Logo](https://raw.githubusercontent.com/ConsumerDataRight/mock-data-holder-energy/main/cdr-logo.png) 
 
+![maintenance-status](https://img.shields.io/badge/Maintenance-Deprecated-red.svg)
 [![Consumer Data Standards v1.22.1](https://img.shields.io/badge/Consumer%20Data%20Standards-v1.22.1-blue.svg)](https://consumerdatastandardsaustralia.github.io/standards-archives/standards-1.22.1/#introduction)
 [![Conformance Test Suite 4.0](https://img.shields.io/badge/Conformance%20Test%20Suite-v4.0-darkblue.svg)](https://www.cdr.gov.au/for-providers/conformance-test-suite-data-holders)
 [![FAPI 1.0 Advanced Profile](https://img.shields.io/badge/FAPI%201.0-orange.svg)](https://openid.net/specs/openid-financial-api-part-2-1_0.html)
 [![made-with-dotnet](https://img.shields.io/badge/Made%20with-.NET-1f425Ff.svg)](https://dotnet.microsoft.com/)
 [![made-with-csharp](https://img.shields.io/badge/Made%20with-C%23-1f425Ff.svg)](https://docs.microsoft.com/en-us/dotnet/csharp/)
 [![MIT License](https://img.shields.io/github/license/ConsumerDataRight/mock-data-holder-energy)](./LICENSE)
-[![Pull Requests Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
+
+# Project Deprecated
+## This project is deprecated and is no longer actively maintained.  Refer to the [Mock Data Holder](https://github.com/ConsumerDataRight/mock-data-holder) repository which contains an implementation of a Mock Data Holder for the Energy sector.
 
 # Consumer Data Right - Mock Data Holder Energy
 This project includes source code, documentation and instructions for a Consumer Data Right (CDR) Mock Data Holder Energy.
